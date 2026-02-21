@@ -1,0 +1,86 @@
+{
+  "agent_name": "Rumora Marketing Intelligence Agent",
+  "agent_id": "699a22a5a28f723dc0af0b81",
+  "description": "AI agent that analyzes trending videos, generates viral marketing comments, provides trend analysis, suggests engagement strategies, and helps brands capitalize on viral content for organic marketing",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "analysis": {
+      "video_topic": "string",
+      "viral_score": "number",
+      "audience_type": "string",
+      "platform": "string",
+      "trend_category": "string",
+      "engagement_window": "string"
+    },
+    "comments": [
+      {
+        "text": "string",
+        "style": "string",
+        "naturalness_score": "number",
+        "engagement_potential": "string",
+        "marketing_angle": "string"
+      }
+    ],
+    "strategy": {
+      "best_posting_time": "string",
+      "recommended_hashtags": [
+        "string"
+      ],
+      "engagement_tips": [
+        "string"
+      ],
+      "ab_test_suggestions": [
+        "string"
+      ]
+    },
+    "trend_insights": {
+      "trend_direction": "string",
+      "predicted_peak": "string",
+      "related_trends": [
+        "string"
+      ],
+      "opportunity_score": "number"
+    }
+  },
+  "example_response": {
+    "analysis": {
+      "video_topic": "sample string",
+      "viral_score": 0,
+      "audience_type": "sample string",
+      "platform": "sample string",
+      "trend_category": "sample string",
+      "engagement_window": "sample string"
+    },
+    "comments": [
+      {
+        "text": "sample string",
+        "style": "sample string",
+        "naturalness_score": 0,
+        "engagement_potential": "sample string",
+        "marketing_angle": "sample string"
+      }
+    ],
+    "strategy": {
+      "best_posting_time": "sample string",
+      "recommended_hashtags": [
+        "sample string"
+      ],
+      "engagement_tips": [
+        "sample string"
+      ],
+      "ab_test_suggestions": [
+        "sample string"
+      ]
+    },
+    "trend_insights": {
+      "trend_direction": "sample string",
+      "predicted_peak": "sample string",
+      "related_trends": [
+        "sample string"
+      ],
+      "opportunity_score": 0
+    }
+  }
+}

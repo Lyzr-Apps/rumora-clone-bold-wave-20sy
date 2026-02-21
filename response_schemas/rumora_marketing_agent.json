@@ -1,0 +1,38 @@
+{
+  "agent_name": "Rumora Marketing Intelligence Agent",
+  "agent_id": "699a22a5a28f723dc0af0b81",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "schema": {
+    "analysis": {
+      "video_topic": "string",
+      "viral_score": "number",
+      "audience_type": "string",
+      "platform": "string",
+      "trend_category": "string",
+      "engagement_window": "string"
+    },
+    "comments": [
+      {
+        "text": "string",
+        "style": "string",
+        "naturalness_score": "number",
+        "engagement_potential": "string",
+        "marketing_angle": "string"
+      }
+    ],
+    "strategy": {
+      "best_posting_time": "string",
+      "recommended_hashtags": ["string"],
+      "engagement_tips": ["string"],
+      "ab_test_suggestions": ["string"]
+    },
+    "trend_insights": {
+      "trend_direction": "string",
+      "predicted_peak": "string",
+      "related_trends": ["string"],
+      "opportunity_score": "number"
+    }
+  }
+}

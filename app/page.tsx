@@ -372,7 +372,7 @@ Provide today's execution queue with 5 ready-to-post comments.`
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center">
                 <FiZap className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className="text-lg font-bold bg-gradient-to-r from-violet-400 via-pink-400 to-violet-400 bg-clip-text text-transparent">RUMORA</span>
+              <span className="text-lg font-bold bg-gradient-to-r from-violet-400 via-pink-400 to-violet-400 bg-clip-text text-transparent">VIRALME</span>
             </div>
             <span className="hidden sm:inline text-[11px] text-gray-500 border-l border-[#1e1e2e] pl-3 ml-1">Viral Video Comment Automation</span>
           </div>
@@ -1078,7 +1078,7 @@ Provide today's execution queue with 5 ready-to-post comments.`
             <div className="w-4 h-4 rounded bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center">
               <FiZap className="w-2.5 h-2.5 text-white" />
             </div>
-            <span className="text-[11px] text-gray-600">RUMORA - Viral Video Comment Automation</span>
+            <span className="text-[11px] text-gray-600">VIRALME - Viral Video Comment Automation</span>
           </div>
           <div className="flex items-center gap-3 text-[11px] text-gray-600">
             <span>100K+ reach</span>

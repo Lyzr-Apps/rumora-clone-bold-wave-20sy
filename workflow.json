@@ -4,19 +4,19 @@
       {
         "id": "input_node",
         "type": "Input",
-        "label": "User Query",
+        "label": "Brand Campaign Input",
         "nodeCategory": "input"
       },
       {
         "id": "rumora_agent",
         "type": "Agent",
-        "label": "Rumora Marketing Intelligence Agent",
+        "label": "Rumora Viral Marketing Automation Agent",
         "nodeCategory": "agent"
       },
       {
         "id": "output_node",
         "type": "Output",
-        "label": "Marketing Results",
+        "label": "Campaign Automation Results",
         "nodeCategory": "end"
       }
     ],
@@ -34,9 +34,9 @@
   "agents": [
     {
       "node_id": "rumora_agent",
-      "agent_id": "699a22a5a28f723dc0af0b81",
-      "name": "Rumora Marketing Intelligence Agent",
-      "description": "AI agent that analyzes trending videos, generates viral marketing comments, provides trend analysis, suggests engagement strategies, and helps brands capitalize on viral content for organic marketing",
+      "agent_id": "699a267d4274f089c16d4440",
+      "name": "Rumora Viral Marketing Automation Agent",
+      "description": "AI agent that automates viral video comment marketing. It discovers trending videos relevant to a brand's niche on YouTube and TikTok, generates authentic marketing comments that subtly promote a brand, creates reply strategies for existing video comments, plans 30-day campaigns targeting 100K+ reach, and provides detailed execution plans for comment automation.",
       "model": "gpt-4.1",
       "provider": "openai",
       "temperature": 0.7,

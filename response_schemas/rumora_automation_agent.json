@@ -1,0 +1,73 @@
+{
+  "agent_name": "Rumora Viral Marketing Automation Agent",
+  "agent_id": "699a267d4274f089c16d4440",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "schema": {
+    "discovered_videos": [{
+      "title": "string",
+      "platform": "string",
+      "url_suggestion": "string",
+      "estimated_views": "string",
+      "engagement_level": "string",
+      "relevance_score": "number",
+      "why_target": "string",
+      "niche_match": "string"
+    }],
+    "generated_comments": [{
+      "target_video": "string",
+      "platform": "string",
+      "comments": [{
+        "text": "string",
+        "style": "string",
+        "naturalness": "number",
+        "brand_mention_type": "string",
+        "estimated_engagement": "string"
+      }]
+    }],
+    "reply_strategies": [{
+      "comment_type": "string",
+      "example_original_comment": "string",
+      "suggested_reply": "string",
+      "brand_integration": "string",
+      "tone": "string"
+    }],
+    "campaign_plan": {
+      "goal": "string",
+      "duration": "string",
+      "total_target_videos": "number",
+      "total_target_reach": "string",
+      "weekly_breakdown": [{
+        "week": "number",
+        "theme": "string",
+        "daily_videos": "number",
+        "platform_focus": "string",
+        "key_actions": ["string"]
+      }],
+      "daily_schedule": [{
+        "day": "string",
+        "videos_to_target": "number",
+        "platform": "string",
+        "optimal_time": "string",
+        "focus_area": "string"
+      }],
+      "kpis": {
+        "comments_per_day": "number",
+        "target_replies": "number",
+        "reach_goal": "string",
+        "engagement_rate_target": "string"
+      }
+    },
+    "execution_queue": [{
+      "priority": "number",
+      "video_title": "string",
+      "platform": "string",
+      "action": "string",
+      "pre_written_comment": "string",
+      "optimal_post_time": "string",
+      "expected_reach": "string",
+      "status": "string"
+    }]
+  }
+}

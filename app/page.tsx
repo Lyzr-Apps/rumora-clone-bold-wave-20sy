@@ -1,8 +1,18 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { callAIAgent } from '@/lib/aiAgent'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
+import {
+  FiTrendingUp, FiZap, FiMessageSquare, FiTarget, FiCopy, FiClock,
+  FiCheck, FiRefreshCw, FiChevronDown, FiChevronUp, FiSearch,
+  FiBarChart2, FiArrowRight, FiPlay, FiEye, FiActivity,
+  FiAlertCircle, FiX, FiSettings, FiCalendar, FiSend,
+  FiCheckCircle, FiCircle, FiExternalLink, FiFilter, FiMenu,
+  FiGlobe, FiUsers, FiLayers, FiAward
+} from 'react-icons/fi'
+import { HiOutlineSparkles, HiOutlineLightBulb, HiOutlineReply } from 'react-icons/hi'
+import { BiVideoRecording } from 'react-icons/bi'
+import { RiTiktokLine, RiYoutubeLine, RiRocketLine } from 'react-icons/ri'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,487 +21,269 @@ import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
-import {
-  FiTrendingUp, FiZap, FiMessageSquare, FiTarget, FiCopy, FiClock,
-  FiCheck, FiRefreshCw, FiChevronDown, FiChevronUp, FiSearch,
-  FiBarChart2, FiHash, FiArrowUp, FiArrowDown, FiArrowRight, FiPlay,
-  FiEye, FiTrash2, FiBookmark, FiActivity, FiAlertCircle, FiX, FiSettings
-} from 'react-icons/fi'
-import { HiOutlineSparkles, HiOutlineLightBulb } from 'react-icons/hi'
-import { BiVideoRecording } from 'react-icons/bi'
-import { RiTiktokLine, RiYoutubeLine } from 'react-icons/ri'
+import { Progress } from '@/components/ui/progress'
 
-const AGENT_ID = '699a22a5a28f723dc0af0b81'
-const AGENT_NAME = 'Rumora Marketing Intelligence Agent'
+// ─── Constants ───────────────────────────────────────────────
+const AGENT_ID = '699a267d4274f089c16d4440'
 
-// --- Interfaces ---
-interface AnalysisData {
-  video_topic?: string
-  viral_score?: number
-  audience_type?: string
-  platform?: string
-  trend_category?: string
-  engagement_window?: string
+// ─── Interfaces ──────────────────────────────────────────────
+interface DiscoveredVideo {
+  title?: string; platform?: string; url_suggestion?: string
+  estimated_views?: string; engagement_level?: string
+  relevance_score?: number; why_target?: string; niche_match?: string
 }
-
-interface CommentData {
-  text?: string
-  style?: string
-  naturalness_score?: number
-  engagement_potential?: string
-  marketing_angle?: string
+interface CommentItem {
+  text?: string; style?: string; naturalness?: number
+  brand_mention_type?: string; estimated_engagement?: string
 }
-
-interface StrategyData {
-  best_posting_time?: string
-  recommended_hashtags?: string[]
-  engagement_tips?: string[]
-  ab_test_suggestions?: string[]
+interface GeneratedCommentGroup {
+  target_video?: string; platform?: string; comments?: CommentItem[]
 }
-
-interface TrendInsightsData {
-  trend_direction?: string
-  predicted_peak?: string
-  related_trends?: string[]
-  opportunity_score?: number
+interface ReplyStrategy {
+  comment_type?: string; example_original_comment?: string
+  suggested_reply?: string; brand_integration?: string; tone?: string
 }
-
+interface WeeklyBreakdown {
+  week?: number; theme?: string; daily_videos?: number
+  platform_focus?: string; key_actions?: string[]
+}
+interface DailyScheduleItem {
+  day?: string; videos_to_target?: number; platform?: string
+  optimal_time?: string; focus_area?: string
+}
+interface KPIs {
+  comments_per_day?: number; target_replies?: number
+  reach_goal?: string; engagement_rate_target?: string
+}
+interface CampaignPlan {
+  goal?: string; duration?: string; total_target_videos?: number
+  total_target_reach?: string; weekly_breakdown?: WeeklyBreakdown[]
+  daily_schedule?: DailyScheduleItem[]; kpis?: KPIs
+}
+interface ExecutionQueueItem {
+  priority?: number; video_title?: string; platform?: string
+  action?: string; pre_written_comment?: string
+  optimal_post_time?: string; expected_reach?: string; status?: string
+}
 interface AgentResponseData {
-  analysis?: AnalysisData
-  comments?: CommentData[]
-  strategy?: StrategyData
-  trend_insights?: TrendInsightsData
+  discovered_videos?: DiscoveredVideo[]
+  generated_comments?: GeneratedCommentGroup[]
+  reply_strategies?: ReplyStrategy[]
+  campaign_plan?: CampaignPlan
+  execution_queue?: ExecutionQueueItem[]
 }
 
-interface HistoryEntry {
-  id: string
-  timestamp: string
-  videoUrl: string
-  platform: string
-  brandName: string
-  viralScore: number
-  topic: string
-}
-
-interface SavedComment {
-  id: string
-  text: string
-  style: string
-  savedAt: string
-}
-
-// --- Theme ---
-const THEME_VARS: React.CSSProperties & Record<string, string> = {
-  '--background': '240 15% 5%',
-  '--foreground': '0 0% 95%',
-  '--card': '240 12% 9%',
-  '--card-foreground': '0 0% 95%',
-  '--popover': '240 12% 9%',
-  '--popover-foreground': '0 0% 95%',
-  '--primary': '263 70% 60%',
-  '--primary-foreground': '0 0% 100%',
-  '--secondary': '240 10% 15%',
-  '--secondary-foreground': '0 0% 80%',
-  '--muted': '240 10% 14%',
-  '--muted-foreground': '240 5% 55%',
-  '--accent': '330 80% 55%',
-  '--accent-foreground': '0 0% 100%',
-  '--destructive': '0 62% 50%',
-  '--destructive-foreground': '0 0% 98%',
-  '--border': '240 10% 18%',
-  '--input': '240 10% 18%',
-  '--ring': '263 70% 60%',
-  '--radius': '0.75rem',
-}
-
-// --- Sample Data ---
-const SAMPLE_RESPONSE: AgentResponseData = {
-  analysis: {
-    video_topic: 'AI-Powered Productivity Tools for Remote Workers',
-    viral_score: 8,
-    audience_type: 'Tech-savvy professionals aged 25-40',
-    platform: 'YouTube',
-    trend_category: 'Technology & Productivity',
-    engagement_window: '24-48 hours from posting'
-  },
-  comments: [
-    {
-      text: "This is literally what I've been searching for! Just switched to this workflow and my team's output doubled. Anyone else seeing similar results?",
-      style: 'relatable',
-      naturalness_score: 9,
-      engagement_potential: 'High - personal experience drives replies',
-      marketing_angle: 'Social proof through authentic experience sharing'
-    },
-    {
-      text: "Wait, does this actually work with Notion? I tried 5 different tools last month and nothing integrated properly. Would love to hear from others who tried it.",
-      style: 'question-based',
-      naturalness_score: 8,
-      engagement_potential: 'Very High - question format invites responses',
-      marketing_angle: 'Problem-solution framing that highlights product value'
-    },
-    {
-      text: "My boss asked why I finished the project 2 days early. I just smiled. Some secrets are worth keeping (but not this one - check the link in bio).",
-      style: 'humorous',
-      naturalness_score: 7,
-      engagement_potential: 'High - humor increases shareability',
-      marketing_angle: 'Aspirational results with playful tone'
-    },
-    {
-      text: "Fun fact: the average remote worker wastes 3.5 hours daily on context switching. Tools like this cut that by 60%. The data doesn't lie.",
-      style: 'informative',
-      naturalness_score: 8,
-      engagement_potential: 'Medium-High - statistics grab attention',
-      marketing_angle: 'Data-driven credibility building'
-    },
-    {
-      text: "Started using this 3 months ago when I was drowning in deadlines. Now I mentor others on the same workflow. The transformation was real.",
-      style: 'story-based',
-      naturalness_score: 9,
-      engagement_potential: 'High - narrative arc creates emotional connection',
-      marketing_angle: 'Transformation story builds aspirational desire'
-    }
+// ─── Sample Data ─────────────────────────────────────────────
+const SAMPLE: AgentResponseData = {
+  discovered_videos: [
+    { title: '10 Productivity Hacks That Actually Work in 2026', platform: 'YouTube', url_suggestion: 'Search "productivity hacks 2026" on YouTube - top 3 results', estimated_views: '1.2M', engagement_level: 'High', relevance_score: 9, why_target: 'Massive engagement from target demographic, comment section actively discussing tool recommendations', niche_match: 'Productivity Software' },
+    { title: 'I Tried Every Task Manager So You Don\'t Have To', platform: 'YouTube', url_suggestion: 'Search "best task manager review 2026"', estimated_views: '850K', engagement_level: 'High', relevance_score: 9, why_target: 'Viewers actively looking for tool recommendations in comments', niche_match: 'Project Management Tools' },
+    { title: 'Remote Work Setup That Changed My Life', platform: 'TikTok', url_suggestion: 'Trending under #remotework and #WFH', estimated_views: '2.1M', engagement_level: 'High', relevance_score: 8, why_target: 'Viral reach with audience perfectly matching FlowDesk target users', niche_match: 'Remote Work Solutions' },
+    { title: 'POV: Your Calendar Runs Your Life', platform: 'TikTok', url_suggestion: 'Trending under #corporatelife #productivity', estimated_views: '3.5M', engagement_level: 'High', relevance_score: 8, why_target: 'Relatable content, comment section is gold for productivity tool mentions', niche_match: 'Calendar & Scheduling' },
+    { title: 'Why Most Teams Fail at Async Communication', platform: 'YouTube', url_suggestion: 'Search "async communication teams" - recent uploads', estimated_views: '420K', engagement_level: 'Medium', relevance_score: 8, why_target: 'Niche audience of team leads actively seeking solutions', niche_match: 'Team Communication' },
+    { title: 'My Honest Review: Top 5 Project Management Tools', platform: 'YouTube', url_suggestion: 'Search "project management tools review 2026"', estimated_views: '670K', engagement_level: 'High', relevance_score: 10, why_target: 'Direct comparison content - perfect for positioning FlowDesk', niche_match: 'Project Management' },
+    { title: 'How I Manage 3 Businesses From My Phone', platform: 'TikTok', url_suggestion: 'Trending under #entrepreneur #business', estimated_views: '1.8M', engagement_level: 'High', relevance_score: 7, why_target: 'Entrepreneur audience always seeking better tools', niche_match: 'Business Management' },
+    { title: 'The Deep Work Method Nobody Talks About', platform: 'YouTube', url_suggestion: 'Search "deep work method" - videos from this week', estimated_views: '380K', engagement_level: 'Medium', relevance_score: 7, why_target: 'Engaged audience interested in focus and productivity systems', niche_match: 'Focus & Deep Work' },
+    { title: 'Corporate Girlies Unite - Desk Organization', platform: 'TikTok', url_suggestion: 'Trending under #corporategirl #desksetup', estimated_views: '4.2M', engagement_level: 'High', relevance_score: 6, why_target: 'Massive reach, workspace optimization discussion in comments', niche_match: 'Workspace Optimization' },
+    { title: 'Stop Using Spreadsheets for Project Management', platform: 'YouTube', url_suggestion: 'Search "spreadsheet vs project management" - recent', estimated_views: '290K', engagement_level: 'Medium', relevance_score: 9, why_target: 'Pain point content - viewers are ready to switch tools', niche_match: 'Project Management Migration' },
   ],
-  strategy: {
-    best_posting_time: 'Tuesday-Thursday, 9-11 AM EST (peak professional browsing)',
-    recommended_hashtags: ['#ProductivityHacks', '#RemoteWork', '#AITools', '#WorkFromHome', '#TechLife', '#Efficiency'],
-    engagement_tips: [
-      'Reply to every comment within the first 2 hours to boost algorithmic ranking',
-      'Pin a comment with a call-to-action after reaching 50+ comments',
-      'Use the question-based comments first to seed discussion threads',
-      'Space comments 15-30 minutes apart to appear organic',
-      'Engage with other comments on the video before posting yours'
+  generated_comments: [
+    { target_video: '10 Productivity Hacks That Actually Work in 2026', platform: 'YouTube', comments: [
+      { text: 'These are solid! I started using FlowDesk for hack #3 (time blocking) and it literally changed my workflow. The AI scheduling feature does the blocking for you based on your energy levels throughout the day.', style: 'helpful', naturalness: 9, brand_mention_type: 'subtle', estimated_engagement: 'High - adds value while mentioning tool naturally' },
+      { text: 'Been doing #7 for months and my team thought I was magic. Plot twist: I just let FlowDesk auto-prioritize my tasks every morning. Sometimes the best hack is letting AI do the heavy lifting.', style: 'relatable', naturalness: 8, brand_mention_type: 'indirect', estimated_engagement: 'High - humor + relatability drives engagement' },
+      { text: 'Has anyone combined these with a project management tool? I found that using something like FlowDesk alongside these hacks 10x the results. Curious what others are using?', style: 'question', naturalness: 9, brand_mention_type: 'subtle', estimated_engagement: 'Very High - question format invites discussion threads' },
+    ]},
+    { target_video: 'I Tried Every Task Manager So You Don\'t Have To', platform: 'YouTube', comments: [
+      { text: 'Great review! One you might have missed is FlowDesk - it combines task management with AI scheduling. What sets it apart is the auto-priority engine that learns from your behavior. Would love to see it in your next comparison.', style: 'helpful', naturalness: 8, brand_mention_type: 'direct', estimated_engagement: 'Medium-High - informative suggestion to creator' },
+      { text: 'I went through this exact journey last year. Tried everything on this list. Ended up on FlowDesk because the team collaboration features actually work without a PhD in project management. Simple > Complex every time.', style: 'endorsement', naturalness: 9, brand_mention_type: 'indirect', estimated_engagement: 'High - personal story resonates' },
+    ]},
+    { target_video: 'Remote Work Setup That Changed My Life', platform: 'TikTok', comments: [
+      { text: 'This setup is fire but the real game changer for remote work is having the right digital tools. FlowDesk keeps my whole remote team synced without the constant Slack spam. Setup + right tools = unstoppable', style: 'endorsement', naturalness: 8, brand_mention_type: 'subtle', estimated_engagement: 'High - adds to conversation naturally' },
+      { text: 'Okay but what about the digital workspace? My physical setup is similar but I pair it with FlowDesk for task flow and honestly that combo is what actually makes WFH work. Anyone else?', style: 'question', naturalness: 9, brand_mention_type: 'subtle', estimated_engagement: 'Very High - engages TikTok comment culture' },
+    ]},
+    { target_video: 'POV: Your Calendar Runs Your Life', platform: 'TikTok', comments: [
+      { text: 'So real. I switched from letting my calendar control me to using FlowDesk AI scheduling. It literally learns when I am most productive and blocks time accordingly. Calendar runs my life but now it runs it WELL', style: 'relatable', naturalness: 9, brand_mention_type: 'indirect', estimated_engagement: 'High - relatable + solution in one' },
+      { text: 'The fix nobody mentions: stop manually scheduling everything. AI tools like FlowDesk do this automatically now. I got 3 hours back every week just from that switch alone.', style: 'helpful', naturalness: 8, brand_mention_type: 'subtle', estimated_engagement: 'Medium-High - practical advice format' },
+    ]},
+    { target_video: 'My Honest Review: Top 5 Project Management Tools', platform: 'YouTube', comments: [
+      { text: 'Solid list! I switched from #2 on your list to FlowDesk about 6 months ago. The AI auto-prioritization and the fact that it doesn\'t require a 2-week onboarding for new team members sold me. Would be great to see it in your next review!', style: 'endorsement', naturalness: 9, brand_mention_type: 'direct', estimated_engagement: 'High - direct positioning against competitors' },
+      { text: 'Anyone else feel like these tools are all basically the same? FlowDesk was the first one that actually felt different - the AI features aren\'t just marketing buzzwords, they genuinely save time. Just my experience though, curious what others think.', style: 'question', naturalness: 8, brand_mention_type: 'indirect', estimated_engagement: 'Very High - provocative question drives debate' },
+    ]},
+  ],
+  reply_strategies: [
+    { comment_type: 'question', example_original_comment: 'What tools do you recommend for managing remote teams?', suggested_reply: 'Great question! We have been using FlowDesk for our remote team of 15 and it has been a game changer. The async updates and AI task prioritization mean fewer meetings and more actual work getting done. Happy to share our setup if helpful!', brand_integration: 'Answers genuinely while positioning FlowDesk as a tested solution from personal experience', tone: 'Helpful and genuine' },
+    { comment_type: 'complaint', example_original_comment: 'I\'m so tired of switching between 5 different apps just to manage my tasks', suggested_reply: 'Felt this in my soul. That app-switching fatigue is real. I consolidated everything into FlowDesk last quarter and went from 5 tools to 1. The all-in-one approach actually works when the tool is designed right. Might be worth checking out!', brand_integration: 'Empathizes with pain point then naturally introduces FlowDesk as the solution they found', tone: 'Empathetic and relatable' },
+    { comment_type: 'positive', example_original_comment: 'This productivity system is amazing! My output has doubled!', suggested_reply: 'Love seeing results like this! I had a similar boost when I combined a system like this with FlowDesk for the execution side. The planning + right tool combo is truly unbeatable. Keep crushing it!', brand_integration: 'Builds on positive energy and suggests FlowDesk as an enhancer rather than replacement', tone: 'Enthusiastic and supportive' },
+    { comment_type: 'debate', example_original_comment: 'Notion is better than any project management tool out there, change my mind', suggested_reply: 'Notion is great for docs and wikis, no debate there. But for actual project management with deadlines, dependencies, and team workload? Tools built specifically for PM like FlowDesk handle that better imo. Different tools for different jobs. What specific PM features do you use in Notion?', brand_integration: 'Respectfully positions FlowDesk as purpose-built alternative while acknowledging competitor strengths', tone: 'Respectful and knowledgeable' },
+    { comment_type: 'question', example_original_comment: 'Does anyone know a good tool for time blocking?', suggested_reply: 'FlowDesk has hands-down the best time blocking I have used. The AI actually learns your energy patterns and suggests optimal blocks. I used to spend 30 min every Sunday planning my week and now it does it automatically. Free trial if you want to test it!', brand_integration: 'Direct answer to a specific question, positions FlowDesk as the expert recommendation', tone: 'Direct and enthusiastic' },
+    { comment_type: 'complaint', example_original_comment: 'Why do all these project management tools have such steep learning curves?', suggested_reply: 'THIS. I tried 4 different tools before finding one that didn\'t need a tutorial video playlist. FlowDesk literally took me 10 minutes to set up. They focused on making it intuitive instead of feature-bloated. Sometimes less really is more.', brand_integration: 'Addresses the exact pain point and positions FlowDesk as the exception to the rule', tone: 'Validating and solution-oriented' },
+  ],
+  campaign_plan: {
+    goal: 'Achieve 100K+ reach through strategic comment placement on trending YouTube and TikTok videos in the productivity and project management niche',
+    duration: '30 days',
+    total_target_videos: 100,
+    total_target_reach: '100,000+',
+    weekly_breakdown: [
+      { week: 1, theme: 'Foundation & Discovery', daily_videos: 3, platform_focus: 'YouTube (60%) + TikTok (40%)', key_actions: ['Identify top 25 target videos', 'Post 3-4 comments per day', 'Focus on high-relevance videos (8+ score)', 'Establish brand voice in comment sections', 'Monitor engagement on posted comments'] },
+      { week: 2, theme: 'Engagement Scaling', daily_videos: 4, platform_focus: 'YouTube (50%) + TikTok (50%)', key_actions: ['Increase to 4 videos per day', 'Start reply strategy execution', 'Target medium-relevance videos (6-8 score)', 'Engage with replies to our comments', 'A/B test comment styles for best engagement'] },
+      { week: 3, theme: 'Viral Wave Riding', daily_videos: 4, platform_focus: 'TikTok (60%) + YouTube (40%)', key_actions: ['Shift focus to TikTok for viral potential', 'Target trending and newly viral videos', 'Deploy question-style comments for thread generation', 'Cross-reference performing comments for patterns', 'Scale what works, cut what doesn\'t'] },
+      { week: 4, theme: 'Reach Maximization', daily_videos: 5, platform_focus: 'Both equally', key_actions: ['Push for remaining reach target', 'Focus on highest-engagement videos', 'Deploy endorsement-style comments more aggressively', 'Final push on viral TikTok content', 'Document results and plan next month'] },
     ],
-    ab_test_suggestions: [
-      'Test relatable vs question-based as first comment to measure reply rates',
-      'Compare morning (9 AM) vs lunch (12 PM) posting for engagement differences',
-      'Try with and without hashtags in comment text to measure visibility impact',
-      'Test emoji usage: professional minimal vs expressive to see audience preference'
-    ]
+    daily_schedule: [
+      { day: 'Day 1', videos_to_target: 3, platform: 'YouTube', optimal_time: '9:00 AM EST', focus_area: 'Productivity hack videos' },
+      { day: 'Day 2', videos_to_target: 3, platform: 'TikTok', optimal_time: '12:00 PM EST', focus_area: 'Remote work content' },
+      { day: 'Day 3', videos_to_target: 3, platform: 'YouTube', optimal_time: '10:00 AM EST', focus_area: 'Tool review videos' },
+      { day: 'Day 4', videos_to_target: 3, platform: 'Both', optimal_time: '11:00 AM EST', focus_area: 'Project management content' },
+      { day: 'Day 5', videos_to_target: 3, platform: 'TikTok', optimal_time: '1:00 PM EST', focus_area: 'Corporate lifestyle content' },
+      { day: 'Day 6', videos_to_target: 2, platform: 'YouTube', optimal_time: '9:00 AM EST', focus_area: 'Deep work and focus content' },
+      { day: 'Day 7', videos_to_target: 2, platform: 'Both', optimal_time: '10:00 AM EST', focus_area: 'Weekly roundup and engagement follow-ups' },
+    ],
+    kpis: { comments_per_day: 5, target_replies: 10, reach_goal: '100,000+', engagement_rate_target: '3-5% reply rate on comments' },
   },
-  trend_insights: {
-    trend_direction: 'Rising',
-    predicted_peak: 'Next 2-3 weeks as Q1 productivity season begins',
-    related_trends: ['AI Automation', 'Digital Nomad Lifestyle', 'Solopreneur Tools', 'Deep Work Methodology', 'Async Communication'],
-    opportunity_score: 9
+  execution_queue: [
+    { priority: 1, video_title: '10 Productivity Hacks That Actually Work in 2026', platform: 'YouTube', action: 'comment', pre_written_comment: 'These are solid! I started using FlowDesk for hack #3 (time blocking) and it literally changed my workflow. The AI scheduling feature does the blocking for you based on your energy levels.', optimal_post_time: '9:00 AM EST', expected_reach: '15,000-25,000', status: 'ready' },
+    { priority: 2, video_title: 'Remote Work Setup That Changed My Life', platform: 'TikTok', action: 'comment', pre_written_comment: 'This setup is fire but the real game changer for remote work is having the right digital tools. FlowDesk keeps my whole remote team synced without the constant Slack spam.', optimal_post_time: '12:00 PM EST', expected_reach: '20,000-35,000', status: 'ready' },
+    { priority: 3, video_title: 'POV: Your Calendar Runs Your Life', platform: 'TikTok', action: 'comment', pre_written_comment: 'So real. I switched from letting my calendar control me to using FlowDesk AI scheduling. It learns when you are most productive and blocks time accordingly.', optimal_post_time: '1:00 PM EST', expected_reach: '30,000-50,000', status: 'ready' },
+    { priority: 4, video_title: 'Why Most Teams Fail at Async Communication', platform: 'YouTube', action: 'reply', pre_written_comment: 'Great question! We use FlowDesk for async updates and it has cut our meeting time by 40%. The AI summaries are actually useful unlike most tools.', optimal_post_time: '10:00 AM EST', expected_reach: '5,000-10,000', status: 'ready' },
+    { priority: 5, video_title: 'My Honest Review: Top 5 Project Management Tools', platform: 'YouTube', action: 'comment', pre_written_comment: 'Solid list! I switched from #2 to FlowDesk about 6 months ago. The AI auto-prioritization and easy onboarding sold me. Would love to see it in your next review!', optimal_post_time: '11:00 AM EST', expected_reach: '8,000-15,000', status: 'ready' },
+  ],
+}
+
+// ─── Helpers ─────────────────────────────────────────────────
+function gid() { return Math.random().toString(36).slice(2, 10) }
+
+function engBadge(level?: string) {
+  if (!level) return 'bg-gray-700/40 text-gray-400 border-gray-600/40'
+  const l = level.toLowerCase()
+  if (l === 'high') return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+  if (l === 'medium') return 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+  return 'bg-red-500/15 text-red-400 border-red-500/30'
+}
+
+function styleBadge(s?: string) {
+  if (!s) return 'bg-gray-700/40 text-gray-400 border-gray-600/40'
+  const m: Record<string, string> = {
+    helpful: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+    relatable: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+    question: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    endorsement: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
   }
+  return m[s.toLowerCase()] || 'bg-gray-700/40 text-gray-400 border-gray-600/40'
 }
 
-// --- Helper Functions ---
-function getViralScoreColor(score: number): string {
-  if (score >= 7) return 'text-emerald-400'
-  if (score >= 4) return 'text-yellow-400'
-  return 'text-red-400'
-}
-
-function getViralScoreBg(score: number): string {
-  if (score >= 7) return 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/30'
-  if (score >= 4) return 'from-yellow-500/20 to-yellow-500/5 border-yellow-500/30'
-  return 'from-red-500/20 to-red-500/5 border-red-500/30'
-}
-
-function getStyleColor(style?: string): string {
-  switch (style?.toLowerCase()) {
-    case 'humorous': return 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-    case 'informative': return 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-    case 'relatable': return 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-    case 'question-based': return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
-    case 'story-based': return 'bg-pink-500/20 text-pink-300 border-pink-500/30'
-    default: return 'bg-gray-500/20 text-gray-300 border-gray-500/30'
+function mentionBadge(t?: string) {
+  if (!t) return 'bg-gray-700/40 text-gray-400'
+  const m: Record<string, string> = {
+    subtle: 'bg-gray-600/30 text-gray-300', indirect: 'bg-amber-500/15 text-amber-400',
+    direct: 'bg-pink-500/15 text-pink-400',
   }
+  return m[t.toLowerCase()] || 'bg-gray-700/40 text-gray-400'
 }
 
-function getTrendIcon(direction?: string) {
-  switch (direction?.toLowerCase()) {
-    case 'rising': return <FiArrowUp className="text-emerald-400" />
-    case 'falling': return <FiArrowDown className="text-red-400" />
-    case 'stable': return <FiArrowRight className="text-yellow-400" />
-    default: return <FiTrendingUp className="text-purple-400" />
+function replyTypeBadge(t?: string) {
+  if (!t) return 'bg-gray-700/40 text-gray-400 border-gray-600/40'
+  const m: Record<string, string> = {
+    question: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    complaint: 'bg-red-500/15 text-red-400 border-red-500/30',
+    positive: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    debate: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
   }
+  return m[t?.toLowerCase() ?? ''] || 'bg-gray-700/40 text-gray-400 border-gray-600/40'
 }
 
-function getTrendColor(direction?: string): string {
-  switch (direction?.toLowerCase()) {
-    case 'rising': return 'text-emerald-400'
-    case 'falling': return 'text-red-400'
-    case 'stable': return 'text-yellow-400'
-    default: return 'text-purple-400'
-  }
+function platformIcon(p?: string) {
+  const pl = p?.toLowerCase() ?? ''
+  if (pl.includes('youtube')) return <RiYoutubeLine className="w-4 h-4 text-red-400" />
+  if (pl.includes('tiktok')) return <RiTiktokLine className="w-4 h-4 text-cyan-400" />
+  return <FiPlay className="w-4 h-4 text-purple-400" />
 }
 
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 11)
+function platformBg(p?: string) {
+  const pl = p?.toLowerCase() ?? ''
+  if (pl.includes('youtube')) return 'bg-red-500/10 border-red-500/20 text-red-400'
+  if (pl.includes('tiktok')) return 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400'
+  return 'bg-purple-500/10 border-purple-500/20 text-purple-400'
 }
 
-// --- Markdown Renderer ---
-function formatInline(text: string) {
-  const parts = text.split(/\*\*(.*?)\*\*/g)
-  if (parts.length === 1) return text
-  return parts.map((part, i) =>
-    i % 2 === 1 ? (
-      <strong key={i} className="font-semibold">{part}</strong>
-    ) : (
-      part
-    )
-  )
-}
-
-function renderMarkdown(text: string) {
-  if (!text) return null
-  return (
-    <div className="space-y-2">
-      {text.split('\n').map((line, i) => {
-        if (line.startsWith('### ')) return <h4 key={i} className="font-semibold text-sm mt-3 mb-1">{line.slice(4)}</h4>
-        if (line.startsWith('## ')) return <h3 key={i} className="font-semibold text-base mt-3 mb-1">{line.slice(3)}</h3>
-        if (line.startsWith('# ')) return <h2 key={i} className="font-bold text-lg mt-4 mb-2">{line.slice(2)}</h2>
-        if (line.startsWith('- ') || line.startsWith('* ')) return <li key={i} className="ml-4 list-disc text-sm">{formatInline(line.slice(2))}</li>
-        if (/^\d+\.\s/.test(line)) return <li key={i} className="ml-4 list-decimal text-sm">{formatInline(line.replace(/^\d+\.\s/, ''))}</li>
-        if (!line.trim()) return <div key={i} className="h-1" />
-        return <p key={i} className="text-sm">{formatInline(line)}</p>
-      })}
-    </div>
-  )
-}
-
-// --- Viral Score Ring ---
-function ViralScoreRing({ score, size = 120 }: { score: number; size?: number }) {
-  const radius = (size - 16) / 2
-  const circumference = 2 * Math.PI * radius
-  const progress = (score / 10) * circumference
-  const strokeColor = score >= 7 ? '#10b981' : score >= 4 ? '#eab308' : '#ef4444'
-
+function ScoreRing({ score, size = 48 }: { score: number; size?: number }) {
+  const r = (size - 8) / 2
+  const c = 2 * Math.PI * r
+  const pct = (score / 10) * c
+  const color = score >= 7 ? '#10b981' : score >= 4 ? '#eab308' : '#ef4444'
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="transform -rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} stroke="rgba(255,255,255,0.08)" strokeWidth="8" fill="none" />
-        <circle cx={size / 2} cy={size / 2} r={radius} stroke={strokeColor} strokeWidth="8" fill="none" strokeDasharray={circumference} strokeDashoffset={circumference - progress} strokeLinecap="round" className="transition-all duration-1000" />
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size/2} cy={size/2} r={r} stroke="rgba(255,255,255,0.06)" strokeWidth="4" fill="none" />
+        <circle cx={size/2} cy={size/2} r={r} stroke={color} strokeWidth="4" fill="none"
+          strokeDasharray={c} strokeDashoffset={c - pct} strokeLinecap="round" className="transition-all duration-700" />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`text-2xl font-bold ${getViralScoreColor(score)}`}>{score}</span>
-        <span className="text-[10px] text-gray-400 uppercase tracking-wider">/ 10</span>
-      </div>
+      <span className="absolute text-xs font-bold" style={{ color }}>{score}</span>
     </div>
   )
 }
 
-// --- Loading Skeleton ---
-function AnalysisSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[1, 2, 3].map(i => (
-          <Card key={i} className="bg-[#16161f] border-[#2a2a3a]">
-            <CardContent className="p-5">
-              <Skeleton className="h-4 w-24 mb-3 bg-[#2a2a3a]" />
-              <Skeleton className="h-8 w-32 bg-[#2a2a3a]" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <Card className="bg-[#16161f] border-[#2a2a3a]">
-        <CardContent className="p-6 space-y-4">
-          <Skeleton className="h-6 w-48 bg-[#2a2a3a]" />
-          <div className="flex gap-4">
-            <Skeleton className="h-24 w-24 rounded-full bg-[#2a2a3a]" />
-            <div className="flex-1 space-y-3">
-              <Skeleton className="h-4 w-full bg-[#2a2a3a]" />
-              <Skeleton className="h-4 w-3/4 bg-[#2a2a3a]" />
-              <Skeleton className="h-4 w-1/2 bg-[#2a2a3a]" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[1, 2, 3, 4].map(i => (
-          <Card key={i} className="bg-[#16161f] border-[#2a2a3a]">
-            <CardContent className="p-5 space-y-3">
-              <Skeleton className="h-4 w-20 bg-[#2a2a3a]" />
-              <Skeleton className="h-16 w-full bg-[#2a2a3a]" />
-              <Skeleton className="h-3 w-32 bg-[#2a2a3a]" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  )
-}
+// ─── Sidebar Nav Items ───────────────────────────────────────
+const NAV_ITEMS = [
+  { id: 'setup', label: 'Campaign Setup', icon: FiSettings },
+  { id: 'discovery', label: 'Video Discovery', icon: FiSearch },
+  { id: 'comments', label: 'Comment Queue', icon: FiMessageSquare },
+  { id: 'replies', label: 'Reply Strategies', icon: HiOutlineReply },
+  { id: 'plan', label: 'Campaign Plan', icon: FiCalendar },
+  { id: 'queue', label: 'Execution Queue', icon: FiSend },
+]
 
-// --- Comment Card ---
-function CommentCard({
-  comment,
-  index,
-  onCopy,
-  onSave,
-  copiedId,
-}: {
-  comment: CommentData
-  index: number
-  onCopy: (text: string, id: string) => void
-  onSave: (comment: CommentData) => void
-  copiedId: string | null
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const cardId = `comment-${index}`
-  const isCopied = copiedId === cardId
-
-  return (
-    <Card className="bg-[#16161f] border-[#2a2a3a] hover:border-purple-500/30 transition-all duration-300 group">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2">
-            <Badge className={`text-[11px] border ${getStyleColor(comment?.style)}`}>
-              {comment?.style ?? 'unknown'}
-            </Badge>
-            <span className="text-xs text-gray-500">#{index + 1}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => onCopy(comment?.text ?? '', cardId)}
-              className="p-1.5 rounded-md hover:bg-white/5 transition-colors text-gray-400 hover:text-white"
-              title="Copy comment"
-            >
-              {isCopied ? <FiCheck className="w-3.5 h-3.5 text-emerald-400" /> : <FiCopy className="w-3.5 h-3.5" />}
-            </button>
-            <button
-              onClick={() => onSave(comment)}
-              className="p-1.5 rounded-md hover:bg-white/5 transition-colors text-gray-400 hover:text-purple-400"
-              title="Save comment"
-            >
-              <FiBookmark className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="relative mb-4">
-          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full" />
-          <p className="pl-4 text-sm text-gray-200 leading-relaxed italic">
-            &ldquo;{comment?.text ?? ''}&rdquo;
-          </p>
-          {isCopied && (
-            <span className="absolute -top-2 right-0 text-[10px] text-emerald-400 font-medium">Copied!</span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3 mb-3">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-gray-500">Naturalness</span>
-            <div className="w-16 h-1.5 rounded-full bg-[#2a2a3a] overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-700"
-                style={{ width: `${((comment?.naturalness_score ?? 0) / 10) * 100}%` }}
-              />
-            </div>
-            <span className="text-[11px] text-gray-400 font-medium">{comment?.naturalness_score ?? 0}/10</span>
-          </div>
-        </div>
-
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-        >
-          {expanded ? <FiChevronUp className="w-3 h-3" /> : <FiChevronDown className="w-3 h-3" />}
-          {expanded ? 'Hide details' : 'Show details'}
-        </button>
-
-        {expanded && (
-          <div className="mt-3 pt-3 border-t border-[#2a2a3a] space-y-2">
-            <div>
-              <span className="text-[11px] text-gray-500 uppercase tracking-wider">Engagement Potential</span>
-              <p className="text-sm text-gray-300 mt-0.5">{comment?.engagement_potential ?? 'N/A'}</p>
-            </div>
-            <div>
-              <span className="text-[11px] text-gray-500 uppercase tracking-wider">Marketing Angle</span>
-              <p className="text-sm text-gray-300 mt-0.5">{comment?.marketing_angle ?? 'N/A'}</p>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
-// --- Error Boundary ---
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error: string }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props)
-    this.state = { hasError: false, error: '' }
-  }
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error: error.message }
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a0f', color: '#e5e5e5' }}>
-          <div className="text-center p-8 max-w-md">
-            <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
-            <p className="text-gray-400 mb-4 text-sm">{this.state.error}</p>
-            <button
-              onClick={() => this.setState({ hasError: false, error: '' })}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm hover:bg-purple-500 transition-colors"
-            >
-              Try again
-            </button>
-          </div>
-        </div>
-      )
-    }
-    return this.props.children
-  }
-}
-
-// --- Main Page ---
+// ─── Main Component ──────────────────────────────────────────
 export default function Page() {
-  // Core state
-  const [activeTab, setActiveTab] = useState('analyze')
+  // State
+  const [activeTab, setActiveTab] = useState('setup')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [agentResponse, setAgentResponse] = useState<AgentResponseData | null>(null)
-  const [activeAgentId, setActiveAgentId] = useState<string | null>(null)
-
-  // Form state
-  const [videoUrl, setVideoUrl] = useState('')
-  const [platform, setPlatform] = useState<'youtube' | 'tiktok' | 'both'>('both')
-  const [brandName, setBrandName] = useState('')
-  const [brandMessage, setBrandMessage] = useState('')
-  const [commentStyles, setCommentStyles] = useState<string[]>(['relatable', 'question-based'])
-  const [numComments, setNumComments] = useState(5)
-
-  // UI state
   const [showSampleData, setShowSampleData] = useState(false)
+
+  // Form
+  const [brandName, setBrandName] = useState('')
+  const [industry, setIndustry] = useState('')
+  const [services, setServices] = useState('')
+  const [targetAudience, setTargetAudience] = useState('')
+  const [brandWebsite, setBrandWebsite] = useState('')
+  const [brandTone, setBrandTone] = useState('professional')
+  const [platform, setPlatform] = useState<'youtube' | 'tiktok' | 'both'>('both')
+  const [campaignGoal, setCampaignGoal] = useState('100K Reach')
+  const [commentsPerDay, setCommentsPerDay] = useState(5)
+
+  // Tracking
+  const [postedComments, setPostedComments] = useState<Set<string>>(new Set())
+  const [completedTasks, setCompletedTasks] = useState<Set<number>>(new Set())
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [copiedHashtag, setCopiedHashtag] = useState<string | null>(null)
-  const [savedComments, setSavedComments] = useState<SavedComment[]>([])
-  const [analysisHistory, setAnalysisHistory] = useState<HistoryEntry[]>([])
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([1]))
+  const [platformFilter, setPlatformFilter] = useState('all')
   const [showSidebar, setShowSidebar] = useState(false)
 
-  // Use sample data or real response
-  const displayData: AgentResponseData | null = showSampleData ? SAMPLE_RESPONSE : agentResponse
-  const analysis = displayData?.analysis ?? {}
-  const comments: CommentData[] = Array.isArray(displayData?.comments) ? displayData.comments : []
-  const strategy = displayData?.strategy ?? {}
-  const trendInsights = displayData?.trend_insights ?? {}
-  const hashtags = Array.isArray(strategy?.recommended_hashtags) ? strategy.recommended_hashtags : []
-  const tips = Array.isArray(strategy?.engagement_tips) ? strategy.engagement_tips : []
-  const abTests = Array.isArray(strategy?.ab_test_suggestions) ? strategy.ab_test_suggestions : []
-  const relatedTrends = Array.isArray(trendInsights?.related_trends) ? trendInsights.related_trends : []
+  // Derived data
+  const displayData: AgentResponseData | null = showSampleData ? SAMPLE : agentResponse
+  const discoveredVideos = useMemo(() => Array.isArray(displayData?.discovered_videos) ? displayData.discovered_videos : [], [displayData])
+  const generatedComments = useMemo(() => {
+    const gc = Array.isArray(displayData?.generated_comments) ? displayData.generated_comments : []
+    return gc.map(g => ({ ...g, comments: Array.isArray(g?.comments) ? g.comments : [] }))
+  }, [displayData])
+  const replyStrategies = useMemo(() => Array.isArray(displayData?.reply_strategies) ? displayData.reply_strategies : [], [displayData])
+  const campaignPlan = displayData?.campaign_plan || {} as CampaignPlan
+  const executionQueue = useMemo(() => Array.isArray(displayData?.execution_queue) ? displayData.execution_queue : [], [displayData])
+  const weeklyBreakdown = useMemo(() => Array.isArray(campaignPlan?.weekly_breakdown) ? campaignPlan.weekly_breakdown : [], [campaignPlan])
+  const dailySchedule = useMemo(() => Array.isArray(campaignPlan?.daily_schedule) ? campaignPlan.daily_schedule : [], [campaignPlan])
+  const kpis = campaignPlan?.kpis || {} as KPIs
 
-  // Stats
-  const totalAnalyses = analysisHistory.length + (showSampleData ? 1 : 0)
-  const totalComments = comments.length
-  const avgViralScore = analysis?.viral_score ?? 0
-  const savedCount = savedComments.length
+  const filteredVideos = useMemo(() => {
+    if (platformFilter === 'all') return discoveredVideos
+    return discoveredVideos.filter(v => v.platform?.toLowerCase().includes(platformFilter))
+  }, [discoveredVideos, platformFilter])
 
-  const handleStyleToggle = useCallback((style: string) => {
-    setCommentStyles(prev =>
-      prev.includes(style) ? prev.filter(s => s !== style) : [...prev, style]
-    )
-  }, [])
+  const totalCommentsReady = useMemo(() => generatedComments.reduce((a, g) => a + (Array.isArray(g.comments) ? g.comments.length : 0), 0), [generatedComments])
+  const hasData = displayData !== null
 
+  // Handlers
   const handleCopy = useCallback((text: string, id: string) => {
     if (!text) return
     navigator.clipboard.writeText(text).catch(() => {})
@@ -499,1023 +291,804 @@ export default function Page() {
     setTimeout(() => setCopiedId(null), 2000)
   }, [])
 
-  const handleCopyHashtag = useCallback((tag: string) => {
-    if (!tag) return
-    navigator.clipboard.writeText(tag).catch(() => {})
-    setCopiedHashtag(tag)
-    setTimeout(() => setCopiedHashtag(null), 2000)
+  const togglePosted = useCallback((id: string) => {
+    setPostedComments(prev => {
+      const s = new Set(prev)
+      s.has(id) ? s.delete(id) : s.add(id)
+      return s
+    })
   }, [])
 
-  const handleSaveComment = useCallback((comment: CommentData) => {
-    setSavedComments(prev => [
-      ...prev,
-      {
-        id: generateId(),
-        text: comment?.text ?? '',
-        style: comment?.style ?? 'unknown',
-        savedAt: new Date().toLocaleString()
-      }
-    ])
+  const toggleTask = useCallback((priority: number) => {
+    setCompletedTasks(prev => {
+      const s = new Set(prev)
+      s.has(priority) ? s.delete(priority) : s.add(priority)
+      return s
+    })
   }, [])
 
-  const handleRemoveSaved = useCallback((id: string) => {
-    setSavedComments(prev => prev.filter(c => c.id !== id))
+  const toggleWeek = useCallback((w: number) => {
+    setExpandedWeeks(prev => {
+      const s = new Set(prev)
+      s.has(w) ? s.delete(w) : s.add(w)
+      return s
+    })
   }, [])
 
-  const handleAnalyze = useCallback(async () => {
-    if (!videoUrl && !brandName && !brandMessage) {
-      setError('Please provide at least a video URL, brand name, or brand message to analyze.')
+  const handleLaunch = useCallback(async () => {
+    if (!brandName.trim() && !industry.trim()) {
+      setError('Please provide at least a brand name and industry/niche to start the campaign.')
       return
     }
-
     setLoading(true)
     setError(null)
-    setActiveAgentId(AGENT_ID)
 
-    const message = `Analyze this for viral marketing opportunities:
-${videoUrl ? `Video/Content URL: ${videoUrl}` : ''}
-Platform: ${platform}
-${brandName ? `Brand: ${brandName}` : ''}
-${brandMessage ? `Brand Message/Product: ${brandMessage}` : ''}
-Desired Comment Styles: ${commentStyles.length > 0 ? commentStyles.join(', ') : 'any'}
-Number of Comments: ${numComments}
-Generate ${numComments} marketing comments and provide full analysis with strategy recommendations, trend insights, and engagement tips.`
+    const message = `Run a complete viral video comment marketing campaign analysis:
+
+Brand Name: ${brandName}
+Industry/Niche: ${industry}
+Services/Products: ${services}
+Target Audience: ${targetAudience}
+Brand Website: ${brandWebsite}
+Brand Tone: ${brandTone}
+Target Platforms: ${platform}
+Campaign Goal: ${campaignGoal}
+Comments Per Day: ${commentsPerDay}
+
+Find 10 trending videos on ${platform === 'both' ? 'YouTube and TikTok' : platform} relevant to ${industry}.
+Generate 2-3 marketing comments per video that subtly promote ${brandName}.
+Create reply strategies for common comment types.
+Build a 30-day campaign plan targeting ${campaignGoal} reach across 100+ videos.
+Provide today's execution queue with 5 ready-to-post comments.`
 
     try {
       const result = await callAIAgent(message, AGENT_ID)
-      setActiveAgentId(null)
-
       if (result.success) {
         const data = result?.response?.result as AgentResponseData | undefined
         setAgentResponse(data ?? null)
-
-        // Add to history
-        const newEntry: HistoryEntry = {
-          id: generateId(),
-          timestamp: new Date().toLocaleString(),
-          videoUrl: videoUrl || 'Direct analysis',
-          platform,
-          brandName: brandName || 'N/A',
-          viralScore: data?.analysis?.viral_score ?? 0,
-          topic: data?.analysis?.video_topic ?? 'Analysis complete'
-        }
-        setAnalysisHistory(prev => [newEntry, ...prev])
-        setActiveTab('results')
+        setActiveTab('discovery')
+        setPostedComments(new Set())
+        setCompletedTasks(new Set())
       } else {
-        setError(result?.error ?? result?.response?.message ?? 'Analysis failed. Please try again.')
+        setError(result?.error ?? result?.response?.message ?? 'Campaign analysis failed. Please try again.')
       }
-    } catch (err) {
-      setActiveAgentId(null)
+    } catch {
       setError('Network error. Please check your connection and try again.')
     }
-
     setLoading(false)
-  }, [videoUrl, platform, brandName, brandMessage, commentStyles, numComments])
+  }, [brandName, industry, services, targetAudience, brandWebsite, brandTone, platform, campaignGoal, commentsPerDay])
 
-  const handleQuickAction = useCallback((topic: string) => {
-    setVideoUrl('')
-    setBrandMessage(topic)
-    setBrandName('')
-  }, [])
-
-  const hasResults = displayData !== null
-
+  // ─── RENDER ────────────────────────────────────────────────
   return (
-    <ErrorBoundary>
-      <div style={THEME_VARS} className="min-h-screen bg-[#0a0a0f] text-gray-100">
-        {/* Header */}
-        <header className="sticky top-0 z-50 border-b border-[#2a2a3a] bg-[#0a0a0f]/90 backdrop-blur-xl">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                    <FiZap className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">RUMORA</span>
-                </div>
-                <span className="hidden sm:inline text-xs text-gray-500 border-l border-[#2a2a3a] pl-3 ml-1">AI Viral Marketing Intelligence</span>
+    <div className="min-h-screen bg-[#0a0a0f] text-gray-100 flex flex-col">
+      {/* ── Header ──────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 border-b border-[#1e1e2e] bg-[#0a0a0f]/95 backdrop-blur-xl">
+        <div className="max-w-[1600px] mx-auto px-4 flex items-center justify-between h-14">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setShowSidebar(!showSidebar)} className="lg:hidden p-2 rounded-lg hover:bg-white/5 text-gray-400">
+              <FiMenu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center">
+                <FiZap className="w-3.5 h-3.5 text-white" />
               </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="sample-toggle" className="text-xs text-gray-400 cursor-pointer">Sample Data</Label>
-                  <Switch
-                    id="sample-toggle"
-                    checked={showSampleData}
-                    onCheckedChange={setShowSampleData}
-                    className="data-[state=checked]:bg-purple-600"
-                  />
-                </div>
-                <button
-                  onClick={() => setShowSidebar(!showSidebar)}
-                  className="p-2 rounded-lg hover:bg-white/5 transition-colors text-gray-400 hover:text-white lg:hidden"
-                >
-                  <FiBookmark className="w-4 h-4" />
-                </button>
-              </div>
+              <span className="text-lg font-bold bg-gradient-to-r from-violet-400 via-pink-400 to-violet-400 bg-clip-text text-transparent">RUMORA</span>
             </div>
+            <span className="hidden sm:inline text-[11px] text-gray-500 border-l border-[#1e1e2e] pl-3 ml-1">Viral Video Comment Automation</span>
           </div>
-        </header>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          <div className="flex gap-6">
-            {/* Main Content */}
-            <div className="flex-1 min-w-0">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="bg-[#16161f] border border-[#2a2a3a] p-1 h-auto">
-                  <TabsTrigger value="analyze" className="gap-1.5 data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300 text-gray-400 px-4 py-2">
-                    <FiSearch className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Analyze</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="results" className="gap-1.5 data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300 text-gray-400 px-4 py-2">
-                    <FiBarChart2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Results</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="comments" className="gap-1.5 data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300 text-gray-400 px-4 py-2">
-                    <FiMessageSquare className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Comments</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="strategy" className="gap-1.5 data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300 text-gray-400 px-4 py-2">
-                    <FiTarget className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Strategy</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="dashboard" className="gap-1.5 data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300 text-gray-400 px-4 py-2">
-                    <FiActivity className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Dashboard</span>
-                  </TabsTrigger>
-                </TabsList>
-
-                {/* === ANALYZE TAB === */}
-                <TabsContent value="analyze" className="space-y-6">
-                  {/* Hero Input Section */}
-                  <Card className="bg-gradient-to-br from-[#16161f] to-[#111118] border-[#2a2a3a] overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-pink-500/5 pointer-events-none" />
-                    <CardHeader className="relative">
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        <HiOutlineSparkles className="w-5 h-5 text-purple-400" />
-                        Viral Comment Generator
-                      </CardTitle>
-                      <CardDescription className="text-gray-400">
-                        Enter a video URL, trend topic, or brand details to generate high-engagement marketing comments
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="relative space-y-5">
-                      {/* Video URL */}
-                      <div className="space-y-2">
-                        <Label className="text-gray-300 text-sm flex items-center gap-1.5">
-                          <BiVideoRecording className="w-3.5 h-3.5 text-purple-400" />
-                          Video URL or Trend Topic
-                        </Label>
-                        <Input
-                          value={videoUrl}
-                          onChange={(e) => setVideoUrl(e.target.value)}
-                          placeholder="https://youtube.com/watch?v=... or describe a trending topic"
-                          className="bg-[#0a0a0f] border-[#2a2a3a] text-gray-200 placeholder:text-gray-600 focus:border-purple-500/50 h-11"
-                        />
-                      </div>
-
-                      {/* Platform Selector */}
-                      <div className="space-y-2">
-                        <Label className="text-gray-300 text-sm">Platform</Label>
-                        <div className="flex gap-2">
-                          {(['youtube', 'tiktok', 'both'] as const).map(p => (
-                            <button
-                              key={p}
-                              onClick={() => setPlatform(p)}
-                              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${platform === p ? 'bg-purple-600/20 border-purple-500/40 text-purple-300' : 'bg-[#0a0a0f] border-[#2a2a3a] text-gray-400 hover:border-gray-600'}`}
-                            >
-                              {p === 'youtube' && <RiYoutubeLine className="w-4 h-4 text-red-400" />}
-                              {p === 'tiktok' && <RiTiktokLine className="w-4 h-4" />}
-                              {p === 'both' && <FiPlay className="w-3.5 h-3.5" />}
-                              {p.charAt(0).toUpperCase() + p.slice(1)}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Brand Details */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-gray-300 text-sm flex items-center gap-1.5">
-                            <FiTarget className="w-3.5 h-3.5 text-cyan-400" />
-                            Brand Name
-                          </Label>
-                          <Input
-                            value={brandName}
-                            onChange={(e) => setBrandName(e.target.value)}
-                            placeholder="Your brand or product name"
-                            className="bg-[#0a0a0f] border-[#2a2a3a] text-gray-200 placeholder:text-gray-600 focus:border-purple-500/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-gray-300 text-sm flex items-center gap-1.5">
-                            <FiHash className="w-3.5 h-3.5 text-pink-400" />
-                            Number of Comments
-                          </Label>
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="range"
-                              min={3}
-                              max={10}
-                              value={numComments}
-                              onChange={(e) => setNumComments(parseInt(e.target.value))}
-                              className="flex-1 h-2 bg-[#2a2a3a] rounded-lg appearance-none cursor-pointer accent-purple-500"
-                            />
-                            <span className="text-sm font-semibold text-purple-300 w-6 text-center">{numComments}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Brand Message */}
-                      <div className="space-y-2">
-                        <Label className="text-gray-300 text-sm flex items-center gap-1.5">
-                          <HiOutlineLightBulb className="w-3.5 h-3.5 text-yellow-400" />
-                          Brand Message / Product Description
-                        </Label>
-                        <Textarea
-                          value={brandMessage}
-                          onChange={(e) => setBrandMessage(e.target.value)}
-                          placeholder="Describe your product, brand positioning, or the key message you want to convey through comments..."
-                          className="bg-[#0a0a0f] border-[#2a2a3a] text-gray-200 placeholder:text-gray-600 focus:border-purple-500/50 min-h-[100px]"
-                        />
-                      </div>
-
-                      {/* Comment Styles */}
-                      <div className="space-y-2">
-                        <Label className="text-gray-300 text-sm">Comment Styles</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {['humorous', 'informative', 'relatable', 'question-based', 'story-based'].map(style => (
-                            <button
-                              key={style}
-                              onClick={() => handleStyleToggle(style)}
-                              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${commentStyles.includes(style) ? getStyleColor(style) : 'bg-[#0a0a0f] border-[#2a2a3a] text-gray-500 hover:text-gray-300 hover:border-gray-600'}`}
-                            >
-                              {style}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Quick Action Chips */}
-                      <div className="space-y-2">
-                        <Label className="text-gray-300 text-sm">Quick Start Topics</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {[
-                            { label: 'Trending Tech', value: 'Latest trending technology product review video' },
-                            { label: 'Fitness Viral', value: 'Viral fitness transformation and workout routine video' },
-                            { label: 'Food Review', value: 'Popular food review and restaurant recommendation video' },
-                            { label: 'Finance Tips', value: 'Personal finance and investment tips video going viral' },
-                          ].map(chip => (
-                            <button
-                              key={chip.label}
-                              onClick={() => handleQuickAction(chip.value)}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs bg-[#0a0a0f] border border-[#2a2a3a] text-gray-400 hover:text-purple-300 hover:border-purple-500/30 transition-all"
-                            >
-                              <FiTrendingUp className="w-3 h-3" />
-                              {chip.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="relative flex flex-col sm:flex-row gap-3">
-                      <Button
-                        onClick={handleAnalyze}
-                        disabled={loading}
-                        className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-sm border-0 shadow-lg shadow-purple-500/20 transition-all"
-                      >
-                        {loading ? (
-                          <span className="flex items-center gap-2">
-                            <FiRefreshCw className="w-4 h-4 animate-spin" />
-                            Analyzing...
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-2">
-                            <HiOutlineSparkles className="w-4 h-4" />
-                            Analyze &amp; Generate Comments
-                          </span>
-                        )}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-
-                  {/* Error Display */}
-                  {error && (
-                    <Card className="bg-red-500/10 border-red-500/30">
-                      <CardContent className="p-4 flex items-start gap-3">
-                        <FiAlertCircle className="w-5 h-5 text-red-400 mt-0.5 shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-sm text-red-300">{error}</p>
-                          <Button
-                            onClick={() => { setError(null); handleAnalyze(); }}
-                            variant="ghost"
-                            size="sm"
-                            className="mt-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 p-0 h-auto"
-                          >
-                            <FiRefreshCw className="w-3 h-3 mr-1" /> Retry
-                          </Button>
-                        </div>
-                        <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">
-                          <FiX className="w-4 h-4" />
-                        </button>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Loading State */}
-                  {loading && <AnalysisSkeleton />}
-                </TabsContent>
-
-                {/* === RESULTS TAB === */}
-                <TabsContent value="results" className="space-y-6">
-                  {!hasResults && !loading ? (
-                    <Card className="bg-[#16161f] border-[#2a2a3a]">
-                      <CardContent className="p-12 text-center">
-                        <FiBarChart2 className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-400 mb-2">No Results Yet</h3>
-                        <p className="text-sm text-gray-500 mb-4">Run an analysis from the Analyze tab to see results here</p>
-                        <Button
-                          onClick={() => setActiveTab('analyze')}
-                          variant="outline"
-                          className="border-purple-500/30 text-purple-300 hover:bg-purple-600/10"
-                        >
-                          Go to Analyze
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ) : hasResults ? (
-                    <>
-                      {/* Analysis Overview */}
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        {/* Viral Score Card */}
-                        <Card className={`bg-gradient-to-br ${getViralScoreBg(analysis?.viral_score ?? 0)} border`}>
-                          <CardContent className="p-6 flex items-center gap-5">
-                            <ViralScoreRing score={analysis?.viral_score ?? 0} />
-                            <div>
-                              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Viral Score</p>
-                              <p className={`text-2xl font-bold ${getViralScoreColor(analysis?.viral_score ?? 0)}`}>
-                                {(analysis?.viral_score ?? 0) >= 7 ? 'High Potential' : (analysis?.viral_score ?? 0) >= 4 ? 'Moderate' : 'Low Potential'}
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">{analysis?.engagement_window ?? ''}</p>
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        {/* Topic & Platform */}
-                        <Card className="bg-[#16161f] border-[#2a2a3a]">
-                          <CardContent className="p-6">
-                            <div className="flex items-start gap-3 mb-3">
-                              <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
-                                <BiVideoRecording className="w-4 h-4 text-purple-400" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Video Topic</p>
-                                <p className="text-sm font-medium text-gray-200 leading-relaxed">{analysis?.video_topic ?? 'N/A'}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 mt-3">
-                              <Badge className={`text-[11px] ${analysis?.platform?.toLowerCase() === 'youtube' ? 'bg-red-500/20 text-red-300 border-red-500/30' : analysis?.platform?.toLowerCase() === 'tiktok' ? 'bg-gray-500/20 text-gray-300 border-gray-500/30' : 'bg-purple-500/20 text-purple-300 border-purple-500/30'} border`}>
-                                {analysis?.platform?.toLowerCase() === 'youtube' ? <RiYoutubeLine className="w-3 h-3 mr-1" /> : analysis?.platform?.toLowerCase() === 'tiktok' ? <RiTiktokLine className="w-3 h-3 mr-1" /> : <FiPlay className="w-3 h-3 mr-1" />}
-                                {analysis?.platform ?? 'N/A'}
-                              </Badge>
-                              {analysis?.trend_category && (
-                                <Badge className="text-[11px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                                  {analysis.trend_category}
-                                </Badge>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        {/* Audience & Trend */}
-                        <Card className="bg-[#16161f] border-[#2a2a3a]">
-                          <CardContent className="p-6 space-y-4">
-                            <div>
-                              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                <FiEye className="w-3 h-3" /> Audience
-                              </p>
-                              <p className="text-sm text-gray-200">{analysis?.audience_type ?? 'N/A'}</p>
-                            </div>
-                            <Separator className="bg-[#2a2a3a]" />
-                            <div>
-                              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                <FiTrendingUp className="w-3 h-3" /> Trend Direction
-                              </p>
-                              <div className="flex items-center gap-2">
-                                {getTrendIcon(trendInsights?.trend_direction)}
-                                <span className={`text-sm font-medium ${getTrendColor(trendInsights?.trend_direction)}`}>
-                                  {trendInsights?.trend_direction ?? 'N/A'}
-                                </span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-
-                      {/* Trend Insights */}
-                      <Card className="bg-[#16161f] border-[#2a2a3a]">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <FiTrendingUp className="w-4 h-4 text-cyan-400" />
-                            Trend Insights
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {/* Opportunity Score */}
-                            <div className="flex items-center gap-4 p-4 rounded-lg bg-[#0a0a0f] border border-[#2a2a3a]">
-                              <ViralScoreRing score={trendInsights?.opportunity_score ?? 0} size={80} />
-                              <div>
-                                <p className="text-xs text-gray-400 uppercase tracking-wider">Opportunity</p>
-                                <p className={`text-lg font-bold ${getViralScoreColor(trendInsights?.opportunity_score ?? 0)}`}>
-                                  {trendInsights?.opportunity_score ?? 0}/10
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Predicted Peak */}
-                            <div className="p-4 rounded-lg bg-[#0a0a0f] border border-[#2a2a3a]">
-                              <div className="flex items-center gap-2 mb-2">
-                                <FiClock className="w-3.5 h-3.5 text-yellow-400" />
-                                <p className="text-xs text-gray-400 uppercase tracking-wider">Predicted Peak</p>
-                              </div>
-                              <p className="text-sm text-gray-200">{trendInsights?.predicted_peak ?? 'N/A'}</p>
-                            </div>
-
-                            {/* Related Trends */}
-                            <div className="p-4 rounded-lg bg-[#0a0a0f] border border-[#2a2a3a]">
-                              <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Related Trends</p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {relatedTrends.length > 0 ? relatedTrends.map((trend, i) => (
-                                  <Badge key={i} className="text-[10px] bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                                    {trend}
-                                  </Badge>
-                                )) : (
-                                  <span className="text-xs text-gray-500">No related trends</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Quick Comments Preview */}
-                      <Card className="bg-[#16161f] border-[#2a2a3a]">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-base flex items-center gap-2">
-                              <FiMessageSquare className="w-4 h-4 text-pink-400" />
-                              Generated Comments ({comments.length})
-                            </CardTitle>
-                            <Button
-                              onClick={() => setActiveTab('comments')}
-                              variant="ghost"
-                              size="sm"
-                              className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
-                            >
-                              View All <FiArrowRight className="w-3 h-3 ml-1" />
-                            </Button>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            {comments.slice(0, 3).map((comment, i) => (
-                              <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-[#0a0a0f] border border-[#2a2a3a]">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1.5">
-                                    <Badge className={`text-[10px] border ${getStyleColor(comment?.style)}`}>
-                                      {comment?.style ?? 'unknown'}
-                                    </Badge>
-                                    <span className="text-[10px] text-gray-500">Score: {comment?.naturalness_score ?? 0}/10</span>
-                                  </div>
-                                  <p className="text-sm text-gray-300 leading-relaxed line-clamp-2">&ldquo;{comment?.text ?? ''}&rdquo;</p>
-                                </div>
-                                <button
-                                  onClick={() => handleCopy(comment?.text ?? '', `preview-${i}`)}
-                                  className="p-1.5 rounded hover:bg-white/5 text-gray-500 hover:text-white transition-colors shrink-0"
-                                >
-                                  {copiedId === `preview-${i}` ? <FiCheck className="w-3.5 h-3.5 text-emerald-400" /> : <FiCopy className="w-3.5 h-3.5" />}
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </>
-                  ) : null}
-
-                  {loading && <AnalysisSkeleton />}
-                </TabsContent>
-
-                {/* === COMMENTS TAB === */}
-                <TabsContent value="comments" className="space-y-6">
-                  {!hasResults && !loading ? (
-                    <Card className="bg-[#16161f] border-[#2a2a3a]">
-                      <CardContent className="p-12 text-center">
-                        <FiMessageSquare className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-400 mb-2">No Comments Generated</h3>
-                        <p className="text-sm text-gray-500 mb-4">Run an analysis first to generate marketing comments</p>
-                        <Button
-                          onClick={() => setActiveTab('analyze')}
-                          variant="outline"
-                          className="border-purple-500/30 text-purple-300 hover:bg-purple-600/10"
-                        >
-                          <FiSearch className="w-3.5 h-3.5 mr-1.5" /> Start Analysis
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ) : hasResults ? (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-semibold flex items-center gap-2">
-                          <FiMessageSquare className="w-5 h-5 text-pink-400" />
-                          Generated Comments
-                          <Badge className="text-[11px] bg-purple-500/20 text-purple-300 border border-purple-500/30">{comments.length}</Badge>
-                        </h2>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={() => {
-                              const allText = comments.map((c, i) => `${i + 1}. [${c?.style ?? ''}] ${c?.text ?? ''}`).join('\n\n')
-                              handleCopy(allText, 'all-comments')
-                            }}
-                            variant="outline"
-                            size="sm"
-                            className="border-[#2a2a3a] text-gray-400 hover:text-white hover:bg-white/5"
-                          >
-                            {copiedId === 'all-comments' ? <FiCheck className="w-3.5 h-3.5 mr-1 text-emerald-400" /> : <FiCopy className="w-3.5 h-3.5 mr-1" />}
-                            {copiedId === 'all-comments' ? 'Copied!' : 'Copy All'}
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {comments.map((comment, i) => (
-                          <CommentCard
-                            key={i}
-                            comment={comment}
-                            index={i}
-                            onCopy={handleCopy}
-                            onSave={handleSaveComment}
-                            copiedId={copiedId}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  ) : null}
-
-                  {loading && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {[1, 2, 3, 4].map(i => (
-                        <Card key={i} className="bg-[#16161f] border-[#2a2a3a]">
-                          <CardContent className="p-5 space-y-3">
-                            <div className="flex items-center gap-2">
-                              <Skeleton className="h-5 w-20 bg-[#2a2a3a]" />
-                              <Skeleton className="h-4 w-8 bg-[#2a2a3a]" />
-                            </div>
-                            <Skeleton className="h-20 w-full bg-[#2a2a3a]" />
-                            <Skeleton className="h-3 w-40 bg-[#2a2a3a]" />
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* === STRATEGY TAB === */}
-                <TabsContent value="strategy" className="space-y-6">
-                  {!hasResults && !loading ? (
-                    <Card className="bg-[#16161f] border-[#2a2a3a]">
-                      <CardContent className="p-12 text-center">
-                        <FiTarget className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-400 mb-2">No Strategy Available</h3>
-                        <p className="text-sm text-gray-500 mb-4">Run an analysis to get posting strategy and tips</p>
-                        <Button
-                          onClick={() => setActiveTab('analyze')}
-                          variant="outline"
-                          className="border-purple-500/30 text-purple-300 hover:bg-purple-600/10"
-                        >
-                          <FiSearch className="w-3.5 h-3.5 mr-1.5" /> Start Analysis
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ) : hasResults ? (
-                    <>
-                      {/* Best Posting Time */}
-                      <Card className="bg-gradient-to-br from-[#16161f] to-[#111118] border-[#2a2a3a]">
-                        <CardContent className="p-6">
-                          <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center shrink-0 border border-cyan-500/20">
-                              <FiClock className="w-6 h-6 text-cyan-400" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Best Posting Time</p>
-                              <p className="text-lg font-semibold text-gray-100">{strategy?.best_posting_time ?? 'N/A'}</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Hashtags */}
-                      <Card className="bg-[#16161f] border-[#2a2a3a]">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <FiHash className="w-4 h-4 text-pink-400" />
-                            Recommended Hashtags
-                          </CardTitle>
-                          <CardDescription className="text-gray-400 text-xs">Click to copy</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex flex-wrap gap-2">
-                            {hashtags.length > 0 ? hashtags.map((tag, i) => (
-                              <button
-                                key={i}
-                                onClick={() => handleCopyHashtag(tag)}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 text-purple-300 hover:border-purple-400/40 hover:from-purple-500/20 hover:to-pink-500/20 transition-all"
-                              >
-                                <FiHash className="w-3 h-3" />
-                                {tag.replace('#', '')}
-                                {copiedHashtag === tag && <FiCheck className="w-3 h-3 text-emerald-400 ml-0.5" />}
-                              </button>
-                            )) : (
-                              <span className="text-sm text-gray-500">No hashtags available</span>
-                            )}
-                          </div>
-                          {hashtags.length > 0 && (
-                            <Button
-                              onClick={() => handleCopy(hashtags.join(' '), 'all-hashtags')}
-                              variant="ghost"
-                              size="sm"
-                              className="mt-3 text-xs text-gray-400 hover:text-purple-300 hover:bg-purple-500/10"
-                            >
-                              {copiedId === 'all-hashtags' ? <><FiCheck className="w-3 h-3 mr-1 text-emerald-400" /> Copied!</> : <><FiCopy className="w-3 h-3 mr-1" /> Copy all hashtags</>}
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-
-                      {/* Engagement Tips */}
-                      <Card className="bg-[#16161f] border-[#2a2a3a]">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <HiOutlineLightBulb className="w-4 h-4 text-yellow-400" />
-                            Engagement Tips
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            {tips.length > 0 ? tips.map((tip, i) => (
-                              <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-[#0a0a0f] border border-[#2a2a3a] hover:border-yellow-500/20 transition-colors">
-                                <div className="w-6 h-6 rounded-full bg-yellow-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                                  <span className="text-xs font-semibold text-yellow-400">{i + 1}</span>
-                                </div>
-                                <p className="text-sm text-gray-300 leading-relaxed">{tip}</p>
-                              </div>
-                            )) : (
-                              <p className="text-sm text-gray-500">No tips available</p>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* A/B Test Suggestions */}
-                      <Card className="bg-[#16161f] border-[#2a2a3a]">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <FiBarChart2 className="w-4 h-4 text-emerald-400" />
-                            A/B Test Suggestions
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {abTests.length > 0 ? abTests.map((test, i) => (
-                              <div key={i} className="p-4 rounded-lg bg-[#0a0a0f] border border-[#2a2a3a] hover:border-emerald-500/20 transition-colors">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <div className="w-5 h-5 rounded bg-emerald-500/10 flex items-center justify-center">
-                                    <span className="text-[10px] font-bold text-emerald-400">{String.fromCharCode(65 + i)}</span>
-                                  </div>
-                                  <span className="text-[11px] text-gray-500 uppercase tracking-wider">Test {i + 1}</span>
-                                </div>
-                                <p className="text-sm text-gray-300">{test}</p>
-                              </div>
-                            )) : (
-                              <p className="text-sm text-gray-500">No A/B test suggestions available</p>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </>
-                  ) : null}
-
-                  {loading && (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map(i => (
-                        <Card key={i} className="bg-[#16161f] border-[#2a2a3a]">
-                          <CardContent className="p-6 space-y-3">
-                            <Skeleton className="h-5 w-32 bg-[#2a2a3a]" />
-                            <Skeleton className="h-4 w-full bg-[#2a2a3a]" />
-                            <Skeleton className="h-4 w-3/4 bg-[#2a2a3a]" />
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* === DASHBOARD TAB === */}
-                <TabsContent value="dashboard" className="space-y-6">
-                  {/* Stats Row */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Card className="bg-[#16161f] border-[#2a2a3a]">
-                      <CardContent className="p-5">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-gray-400 uppercase tracking-wider">Analyses</span>
-                          <FiBarChart2 className="w-4 h-4 text-purple-400" />
-                        </div>
-                        <p className="text-2xl font-bold text-gray-100">{totalAnalyses}</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-[#16161f] border-[#2a2a3a]">
-                      <CardContent className="p-5">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-gray-400 uppercase tracking-wider">Comments</span>
-                          <FiMessageSquare className="w-4 h-4 text-pink-400" />
-                        </div>
-                        <p className="text-2xl font-bold text-gray-100">{totalComments}</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-[#16161f] border-[#2a2a3a]">
-                      <CardContent className="p-5">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-gray-400 uppercase tracking-wider">Viral Score</span>
-                          <FiTrendingUp className="w-4 h-4 text-emerald-400" />
-                        </div>
-                        <p className={`text-2xl font-bold ${getViralScoreColor(avgViralScore)}`}>{avgViralScore || '-'}</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-[#16161f] border-[#2a2a3a]">
-                      <CardContent className="p-5">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-gray-400 uppercase tracking-wider">Saved</span>
-                          <FiBookmark className="w-4 h-4 text-cyan-400" />
-                        </div>
-                        <p className="text-2xl font-bold text-gray-100">{savedCount}</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Recent Analyses */}
-                  <Card className="bg-[#16161f] border-[#2a2a3a]">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <FiClock className="w-4 h-4 text-gray-400" />
-                        Recent Analyses
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {analysisHistory.length > 0 ? (
-                        <ScrollArea className="max-h-[320px]">
-                          <div className="space-y-2">
-                            {analysisHistory.map(entry => (
-                              <div key={entry.id} className="flex items-center justify-between p-3 rounded-lg bg-[#0a0a0f] border border-[#2a2a3a] hover:border-purple-500/20 transition-colors">
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${entry.platform === 'youtube' ? 'bg-red-500/10' : entry.platform === 'tiktok' ? 'bg-gray-500/10' : 'bg-purple-500/10'}`}>
-                                    {entry.platform === 'youtube' ? <RiYoutubeLine className="w-4 h-4 text-red-400" /> : entry.platform === 'tiktok' ? <RiTiktokLine className="w-4 h-4 text-gray-400" /> : <FiPlay className="w-3.5 h-3.5 text-purple-400" />}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-sm text-gray-200 truncate">{entry.topic}</p>
-                                    <p className="text-xs text-gray-500">{entry.timestamp} {entry.brandName !== 'N/A' ? `- ${entry.brandName}` : ''}</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0 ml-2">
-                                  <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${getViralScoreColor(entry.viralScore)} bg-white/5`}>
-                                    {entry.viralScore}/10
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      ) : (
-                        <div className="text-center py-8">
-                          <FiClock className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-                          <p className="text-sm text-gray-500">No analyses yet. Run your first analysis!</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Saved Comments */}
-                  <Card className="bg-[#16161f] border-[#2a2a3a]">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <FiBookmark className="w-4 h-4 text-purple-400" />
-                        Saved Comments ({savedComments.length})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {savedComments.length > 0 ? (
-                        <ScrollArea className="max-h-[320px]">
-                          <div className="space-y-2">
-                            {savedComments.map(sc => (
-                              <div key={sc.id} className="flex items-start gap-3 p-3 rounded-lg bg-[#0a0a0f] border border-[#2a2a3a] group">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Badge className={`text-[10px] border ${getStyleColor(sc.style)}`}>{sc.style}</Badge>
-                                    <span className="text-[10px] text-gray-500">{sc.savedAt}</span>
-                                  </div>
-                                  <p className="text-sm text-gray-300 line-clamp-2">&ldquo;{sc.text}&rdquo;</p>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    onClick={() => handleCopy(sc.text, `saved-${sc.id}`)}
-                                    className="p-1.5 rounded hover:bg-white/5 text-gray-500 hover:text-white transition-colors"
-                                  >
-                                    {copiedId === `saved-${sc.id}` ? <FiCheck className="w-3.5 h-3.5 text-emerald-400" /> : <FiCopy className="w-3.5 h-3.5" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleRemoveSaved(sc.id)}
-                                    className="p-1.5 rounded hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
-                                  >
-                                    <FiTrash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      ) : (
-                        <div className="text-center py-8">
-                          <FiBookmark className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-                          <p className="text-sm text-gray-500">Save comments from your analyses to find them here</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Quick Actions */}
-                  <Card className="bg-[#16161f] border-[#2a2a3a]">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <FiZap className="w-4 h-4 text-yellow-400" />
-                        Quick Actions
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <Button
-                          onClick={() => setActiveTab('analyze')}
-                          variant="outline"
-                          className="h-auto py-4 flex flex-col items-center gap-2 border-[#2a2a3a] bg-[#0a0a0f] hover:border-purple-500/30 hover:bg-purple-500/5 text-gray-300"
-                        >
-                          <FiSearch className="w-5 h-5 text-purple-400" />
-                          <span className="text-xs">New Analysis</span>
-                        </Button>
-                        <Button
-                          onClick={() => setActiveTab('comments')}
-                          variant="outline"
-                          className="h-auto py-4 flex flex-col items-center gap-2 border-[#2a2a3a] bg-[#0a0a0f] hover:border-pink-500/30 hover:bg-pink-500/5 text-gray-300"
-                        >
-                          <FiMessageSquare className="w-5 h-5 text-pink-400" />
-                          <span className="text-xs">View Comments</span>
-                        </Button>
-                        <Button
-                          onClick={() => setActiveTab('strategy')}
-                          variant="outline"
-                          className="h-auto py-4 flex flex-col items-center gap-2 border-[#2a2a3a] bg-[#0a0a0f] hover:border-cyan-500/30 hover:bg-cyan-500/5 text-gray-300"
-                        >
-                          <FiTarget className="w-5 h-5 text-cyan-400" />
-                          <span className="text-xs">View Strategy</span>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${loading ? 'bg-emerald-400 animate-pulse' : hasData ? 'bg-violet-400' : 'bg-gray-600'}`} />
+              <span className="text-[11px] text-gray-500">{loading ? 'Processing...' : hasData ? 'Campaign Active' : 'Idle'}</span>
             </div>
-
-            {/* Sidebar */}
-            <aside className={`w-72 shrink-0 space-y-4 ${showSidebar ? 'fixed inset-y-0 right-0 z-50 bg-[#0a0a0f] p-4 pt-20 border-l border-[#2a2a3a] overflow-y-auto' : 'hidden lg:block'}`}>
-              {showSidebar && (
-                <button
-                  onClick={() => setShowSidebar(false)}
-                  className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/5 text-gray-400"
-                >
-                  <FiX className="w-4 h-4" />
-                </button>
-              )}
-
-              {/* Saved Comments Sidebar */}
-              <Card className="bg-[#16161f] border-[#2a2a3a]">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-sm flex items-center gap-1.5">
-                    <FiBookmark className="w-3.5 h-3.5 text-purple-400" />
-                    Saved ({savedComments.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  {savedComments.length > 0 ? (
-                    <ScrollArea className="max-h-[200px]">
-                      <div className="space-y-2">
-                        {savedComments.slice(0, 5).map(sc => (
-                          <div key={sc.id} className="p-2 rounded bg-[#0a0a0f] border border-[#2a2a3a]">
-                            <p className="text-[11px] text-gray-400 line-clamp-2">&ldquo;{sc.text}&rdquo;</p>
-                            <div className="flex items-center justify-between mt-1">
-                              <Badge className={`text-[9px] border ${getStyleColor(sc.style)}`}>{sc.style}</Badge>
-                              <button
-                                onClick={() => handleCopy(sc.text, `side-${sc.id}`)}
-                                className="p-1 rounded hover:bg-white/5 text-gray-500"
-                              >
-                                {copiedId === `side-${sc.id}` ? <FiCheck className="w-3 h-3 text-emerald-400" /> : <FiCopy className="w-3 h-3" />}
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  ) : (
-                    <p className="text-xs text-gray-500 text-center py-3">No saved comments yet</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* History Sidebar */}
-              <Card className="bg-[#16161f] border-[#2a2a3a]">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-sm flex items-center gap-1.5">
-                    <FiClock className="w-3.5 h-3.5 text-gray-400" />
-                    History ({analysisHistory.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  {analysisHistory.length > 0 ? (
-                    <ScrollArea className="max-h-[200px]">
-                      <div className="space-y-2">
-                        {analysisHistory.slice(0, 5).map(entry => (
-                          <div key={entry.id} className="p-2 rounded bg-[#0a0a0f] border border-[#2a2a3a]">
-                            <p className="text-[11px] text-gray-300 truncate">{entry.topic}</p>
-                            <div className="flex items-center justify-between mt-1">
-                              <span className="text-[10px] text-gray-500">{entry.timestamp}</span>
-                              <span className={`text-[10px] font-medium ${getViralScoreColor(entry.viralScore)}`}>{entry.viralScore}/10</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  ) : (
-                    <p className="text-xs text-gray-500 text-center py-3">No history yet</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Agent Status */}
-              <Card className="bg-[#16161f] border-[#2a2a3a]">
-                <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-sm flex items-center gap-1.5">
-                    <FiSettings className="w-3.5 h-3.5 text-gray-400" />
-                    Agent
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-2 h-2 rounded-full shrink-0 ${activeAgentId ? 'bg-emerald-400 animate-pulse' : 'bg-gray-600'}`} />
-                    <div className="min-w-0">
-                      <p className="text-xs text-gray-300 truncate">{AGENT_NAME}</p>
-                      <p className="text-[10px] text-gray-500 font-mono truncate">{AGENT_ID}</p>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center gap-1">
-                    <span className="text-[10px] text-gray-500">Status:</span>
-                    <span className={`text-[10px] font-medium ${activeAgentId ? 'text-emerald-400' : 'text-gray-400'}`}>
-                      {activeAgentId ? 'Processing...' : 'Idle'}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </aside>
+            <Separator orientation="vertical" className="h-5 bg-[#1e1e2e]" />
+            <div className="flex items-center gap-2">
+              <Label htmlFor="sample" className="text-[11px] text-gray-500 cursor-pointer">Demo</Label>
+              <Switch id="sample" checked={showSampleData} onCheckedChange={setShowSampleData} className="data-[state=checked]:bg-violet-600 scale-90" />
+            </div>
           </div>
         </div>
+      </header>
 
-        {/* Footer */}
-        <footer className="border-t border-[#2a2a3a] mt-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <FiZap className="w-3 h-3 text-white" />
+      <div className="flex flex-1 max-w-[1600px] mx-auto w-full">
+        {/* ── Sidebar ─────────────────────────────────────── */}
+        <aside className={`${showSidebar ? 'fixed inset-0 z-40 bg-black/60 lg:static lg:bg-transparent' : 'hidden lg:block'}`}>
+          {showSidebar && <div className="absolute inset-0 lg:hidden" onClick={() => setShowSidebar(false)} />}
+          <div className={`${showSidebar ? 'absolute left-0 top-0 bottom-0 w-64 bg-[#0a0a0f] border-r border-[#1e1e2e] z-50 pt-16' : ''} w-60 border-r border-[#1e1e2e] p-4 space-y-4 shrink-0 overflow-y-auto`} style={{ maxHeight: 'calc(100vh - 56px)' }}>
+            {/* Brand Profile */}
+            {(brandName || showSampleData) && (
+              <div className="p-3 rounded-xl bg-gradient-to-br from-violet-500/10 to-pink-500/5 border border-violet-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                    <FiAward className="w-4 h-4 text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-100">{showSampleData ? 'FlowDesk' : brandName || 'Your Brand'}</p>
+                    <p className="text-[10px] text-gray-500">{showSampleData ? 'Productivity Software' : industry || 'Set up campaign'}</p>
+                  </div>
                 </div>
-                <span className="text-xs text-gray-500">RUMORA AI Viral Marketing Intelligence</span>
+                <Badge className={`text-[10px] ${hasData ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-gray-700/40 text-gray-400 border-gray-600/40'} border`}>
+                  {hasData ? 'Campaign Active' : 'Not Started'}
+                </Badge>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${activeAgentId ? 'bg-emerald-400 animate-pulse' : 'bg-gray-600'}`} />
-                  <span className="text-[11px] text-gray-500">{activeAgentId ? 'Agent Active' : 'Agent Ready'}</span>
+            )}
+
+            {/* Navigation */}
+            <nav className="space-y-1">
+              {NAV_ITEMS.map(item => (
+                <button key={item.id} onClick={() => { setActiveTab(item.id); setShowSidebar(false) }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${activeTab === item.id ? 'bg-violet-500/15 text-violet-300 font-medium' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`}
+                >
+                  <item.icon className="w-4 h-4 shrink-0" />
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+
+            <Separator className="bg-[#1e1e2e]" />
+
+            {/* Mini Stats */}
+            <div className="space-y-2">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider px-1">Campaign Stats</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2.5 rounded-lg bg-[#111118] border border-[#1e1e2e]">
+                  <p className="text-[10px] text-gray-500">Videos</p>
+                  <p className="text-lg font-bold text-gray-100">{discoveredVideos.length}</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#111118] border border-[#1e1e2e]">
+                  <p className="text-[10px] text-gray-500">Comments</p>
+                  <p className="text-lg font-bold text-gray-100">{totalCommentsReady}</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#111118] border border-[#1e1e2e]">
+                  <p className="text-[10px] text-gray-500">Reach</p>
+                  <p className="text-sm font-bold text-emerald-400">{campaignPlan?.total_target_reach || '--'}</p>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#111118] border border-[#1e1e2e]">
+                  <p className="text-[10px] text-gray-500">Queue</p>
+                  <p className="text-lg font-bold text-gray-100">{executionQueue.length}</p>
                 </div>
               </div>
             </div>
           </div>
-        </footer>
+        </aside>
+
+        {/* ── Main Content ────────────────────────────────── */}
+        <main className="flex-1 p-4 sm:p-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 56px)' }}>
+          {/* Error */}
+          {error && (
+            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3">
+              <FiAlertCircle className="w-5 h-5 text-red-400 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-red-300">{error}</p>
+                <button onClick={() => { setError(null); handleLaunch() }}
+                  className="mt-1.5 text-xs text-red-400 hover:text-red-300 flex items-center gap-1">
+                  <FiRefreshCw className="w-3 h-3" /> Retry
+                </button>
+              </div>
+              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300"><FiX className="w-4 h-4" /></button>
+            </div>
+          )}
+
+          {/* ═══ Tab: Campaign Setup ══════════════════════ */}
+          {activeTab === 'setup' && (
+            <div className="max-w-3xl mx-auto space-y-6">
+              <div className="text-center mb-8">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent mb-2">Launch Your Viral Comment Campaign</h1>
+                <p className="text-sm text-gray-400">Set up your brand profile and let AI discover trending videos, generate comments, and plan your 30-day campaign</p>
+              </div>
+
+              {/* Campaign Promise Banner */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-violet-500/10 via-pink-500/10 to-violet-500/10 border border-violet-500/20">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+                  {[
+                    { val: '100K+', label: 'Reach Target', icon: FiTrendingUp },
+                    { val: 'YouTube', label: '+ TikTok', icon: FiPlay },
+                    { val: '100', label: 'Videos', icon: BiVideoRecording },
+                    { val: '1', label: 'Brand', icon: FiAward },
+                    { val: '30', label: 'Days', icon: FiCalendar },
+                  ].map((s, i) => (
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      <s.icon className="w-4 h-4 text-violet-400" />
+                      <span className="text-lg font-bold text-white">{s.val}</span>
+                      <span className="text-[10px] text-gray-500">{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Form */}
+              <div className="space-y-4 p-5 rounded-xl bg-[#111118] border border-[#1e1e2e]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-gray-300 text-xs flex items-center gap-1"><FiAward className="w-3 h-3 text-violet-400" /> Brand Name</Label>
+                    <Input value={brandName} onChange={e => setBrandName(e.target.value)} placeholder="e.g. FlowDesk"
+                      className="bg-[#0a0a0f] border-[#1e1e2e] text-gray-200 placeholder:text-gray-600 focus:border-violet-500/50 h-10" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-gray-300 text-xs flex items-center gap-1"><FiLayers className="w-3 h-3 text-cyan-400" /> Industry / Niche</Label>
+                    <Input value={industry} onChange={e => setIndustry(e.target.value)} placeholder="e.g. Productivity Software, SaaS"
+                      className="bg-[#0a0a0f] border-[#1e1e2e] text-gray-200 placeholder:text-gray-600 focus:border-violet-500/50 h-10" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-gray-300 text-xs flex items-center gap-1"><HiOutlineLightBulb className="w-3 h-3 text-yellow-400" /> Services / Products to Promote</Label>
+                  <Textarea value={services} onChange={e => setServices(e.target.value)}
+                    placeholder="Describe what you want to promote in the comments..."
+                    className="bg-[#0a0a0f] border-[#1e1e2e] text-gray-200 placeholder:text-gray-600 focus:border-violet-500/50 min-h-[80px]" />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-gray-300 text-xs flex items-center gap-1"><FiUsers className="w-3 h-3 text-pink-400" /> Target Audience</Label>
+                    <Input value={targetAudience} onChange={e => setTargetAudience(e.target.value)} placeholder="e.g. Remote workers, startup founders"
+                      className="bg-[#0a0a0f] border-[#1e1e2e] text-gray-200 placeholder:text-gray-600 focus:border-violet-500/50 h-10" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-gray-300 text-xs flex items-center gap-1"><FiGlobe className="w-3 h-3 text-emerald-400" /> Brand Website</Label>
+                    <Input value={brandWebsite} onChange={e => setBrandWebsite(e.target.value)} placeholder="https://yoursite.com"
+                      className="bg-[#0a0a0f] border-[#1e1e2e] text-gray-200 placeholder:text-gray-600 focus:border-violet-500/50 h-10" />
+                  </div>
+                </div>
+
+                {/* Tone */}
+                <div className="space-y-1.5">
+                  <Label className="text-gray-300 text-xs">Brand Tone</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {['professional', 'casual', 'witty', 'inspirational'].map(t => (
+                      <button key={t} onClick={() => setBrandTone(t)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${brandTone === t ? 'bg-violet-500/20 border-violet-500/40 text-violet-300' : 'bg-[#0a0a0f] border-[#1e1e2e] text-gray-500 hover:text-gray-300 hover:border-gray-600'}`}>
+                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Platform */}
+                <div className="space-y-1.5">
+                  <Label className="text-gray-300 text-xs">Target Platforms</Label>
+                  <div className="flex gap-2">
+                    {([['youtube', 'YouTube', RiYoutubeLine, 'text-red-400'], ['tiktok', 'TikTok', RiTiktokLine, 'text-cyan-400'], ['both', 'Both', FiPlay, 'text-violet-400']] as const).map(([val, label, Icon, iconColor]) => (
+                      <button key={val} onClick={() => setPlatform(val as 'youtube' | 'tiktok' | 'both')}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${platform === val ? 'bg-violet-500/15 border-violet-500/40 text-violet-300' : 'bg-[#0a0a0f] border-[#1e1e2e] text-gray-500 hover:border-gray-600'}`}>
+                        <Icon className={`w-4 h-4 ${iconColor}`} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Goal + Comments */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-gray-300 text-xs">Campaign Goal</Label>
+                    <div className="flex gap-2">
+                      {['100K Reach', '50K Reach', 'Custom'].map(g => (
+                        <button key={g} onClick={() => setCampaignGoal(g)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${campaignGoal === g ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-[#0a0a0f] border-[#1e1e2e] text-gray-500 hover:text-gray-300'}`}>
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-gray-300 text-xs">Comments Per Day: {commentsPerDay}</Label>
+                    <input type="range" min={3} max={15} value={commentsPerDay} onChange={e => setCommentsPerDay(parseInt(e.target.value))}
+                      className="w-full h-2 bg-[#1e1e2e] rounded-lg appearance-none cursor-pointer accent-violet-500" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Launch Button */}
+              <button onClick={handleLaunch} disabled={loading}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white font-semibold text-sm shadow-lg shadow-violet-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                {loading ? (
+                  <><FiRefreshCw className="w-4 h-4 animate-spin" /> Discovering Videos &amp; Building Campaign...</>
+                ) : (
+                  <><RiRocketLine className="w-5 h-5" /> Launch Campaign Discovery</>
+                )}
+              </button>
+
+              {loading && (
+                <div className="space-y-3">
+                  {[1,2,3].map(i => (
+                    <div key={i} className="p-4 rounded-xl bg-[#111118] border border-[#1e1e2e] space-y-3">
+                      <Skeleton className="h-4 w-48 bg-[#1e1e2e]" />
+                      <Skeleton className="h-3 w-full bg-[#1e1e2e]" />
+                      <Skeleton className="h-3 w-3/4 bg-[#1e1e2e]" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ Tab: Video Discovery ═════════════════════ */}
+          {activeTab === 'discovery' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <FiSearch className="w-5 h-5 text-violet-400" /> Discovered Target Videos
+                  <Badge className="text-[11px] bg-violet-500/15 text-violet-300 border border-violet-500/30">{filteredVideos.length}</Badge>
+                </h2>
+                <div className="flex items-center gap-2">
+                  <FiFilter className="w-3.5 h-3.5 text-gray-500" />
+                  {['all', 'youtube', 'tiktok'].map(f => (
+                    <button key={f} onClick={() => setPlatformFilter(f)}
+                      className={`px-3 py-1 rounded-lg text-xs border transition-all ${platformFilter === f ? 'bg-violet-500/15 border-violet-500/40 text-violet-300' : 'bg-[#111118] border-[#1e1e2e] text-gray-500 hover:text-gray-300'}`}>
+                      {f === 'all' ? 'All' : f === 'youtube' ? 'YouTube' : 'TikTok'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {!hasData && !loading ? (
+                <div className="p-12 rounded-xl bg-[#111118] border border-[#1e1e2e] text-center">
+                  <FiSearch className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+                  <h3 className="text-base font-medium text-gray-400 mb-2">No Videos Discovered Yet</h3>
+                  <p className="text-sm text-gray-500 mb-4">Set up your campaign to discover target videos</p>
+                  <Button onClick={() => setActiveTab('setup')} variant="outline" className="border-violet-500/30 text-violet-300 hover:bg-violet-600/10">
+                    Go to Campaign Setup
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {filteredVideos.map((video, i) => (
+                    <div key={i} className="p-4 rounded-xl bg-[#111118] border border-[#1e1e2e] hover:border-violet-500/30 transition-all group">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2">
+                          <Badge className={`text-[10px] border ${platformBg(video.platform)}`}>
+                            {platformIcon(video.platform)}
+                            <span className="ml-1">{video.platform}</span>
+                          </Badge>
+                          <Badge className={`text-[10px] border ${engBadge(video.engagement_level)}`}>
+                            {video.engagement_level}
+                          </Badge>
+                        </div>
+                        <ScoreRing score={video.relevance_score ?? 0} />
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-200 mb-2 leading-snug">{video.title}</h3>
+                      <div className="flex items-center gap-3 mb-3 text-xs text-gray-400">
+                        <span className="flex items-center gap-1"><FiEye className="w-3 h-3" /> {video.estimated_views}</span>
+                        <Badge className="text-[10px] bg-[#0a0a0f] text-gray-400 border border-[#1e1e2e]">{video.niche_match}</Badge>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-3 leading-relaxed">{video.why_target}</p>
+                      <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                        <FiExternalLink className="w-3 h-3" />
+                        <span className="truncate">{video.url_suggestion}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {loading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="p-4 rounded-xl bg-[#111118] border border-[#1e1e2e] space-y-3">
+                      <Skeleton className="h-5 w-20 bg-[#1e1e2e]" />
+                      <Skeleton className="h-4 w-full bg-[#1e1e2e]" />
+                      <Skeleton className="h-3 w-3/4 bg-[#1e1e2e]" />
+                      <Skeleton className="h-3 w-1/2 bg-[#1e1e2e]" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ Tab: Comment Queue ═══════════════════════ */}
+          {activeTab === 'comments' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <FiMessageSquare className="w-5 h-5 text-pink-400" /> Comment Queue
+                  <Badge className="text-[11px] bg-pink-500/15 text-pink-300 border border-pink-500/30">{totalCommentsReady} ready</Badge>
+                </h2>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <FiCheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  {postedComments.size} of {totalCommentsReady} posted
+                </div>
+              </div>
+
+              {!hasData && !loading ? (
+                <div className="p-12 rounded-xl bg-[#111118] border border-[#1e1e2e] text-center">
+                  <FiMessageSquare className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+                  <h3 className="text-base font-medium text-gray-400 mb-2">No Comments Generated</h3>
+                  <p className="text-sm text-gray-500 mb-4">Run a campaign to generate marketing comments</p>
+                  <Button onClick={() => setActiveTab('setup')} variant="outline" className="border-violet-500/30 text-violet-300 hover:bg-violet-600/10">
+                    Set Up Campaign
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {generatedComments.map((group, gi) => (
+                    <div key={gi} className="space-y-2">
+                      <div className="flex items-center gap-2 px-1">
+                        {platformIcon(group.platform)}
+                        <h3 className="text-sm font-semibold text-gray-300">{group.target_video}</h3>
+                        <Badge className={`text-[10px] border ${platformBg(group.platform)}`}>{group.platform}</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {(Array.isArray(group.comments) ? group.comments : []).map((comment, ci) => {
+                          const cid = `${gi}-${ci}`
+                          const isPosted = postedComments.has(cid)
+                          return (
+                            <div key={ci} className={`p-4 rounded-xl border transition-all ${isPosted ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-[#111118] border-[#1e1e2e] hover:border-violet-500/20'}`}>
+                              <div className="flex items-start justify-between gap-3 mb-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge className={`text-[10px] border ${styleBadge(comment.style)}`}>{comment.style}</Badge>
+                                  <Badge className={`text-[10px] ${mentionBadge(comment.brand_mention_type)}`}>{comment.brand_mention_type}</Badge>
+                                  {isPosted && <Badge className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Posted</Badge>}
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button onClick={() => handleCopy(comment.text ?? '', cid)}
+                                    className="p-1.5 rounded-md hover:bg-white/5 text-gray-500 hover:text-white transition-colors" title="Copy">
+                                    {copiedId === cid ? <FiCheck className="w-3.5 h-3.5 text-emerald-400" /> : <FiCopy className="w-3.5 h-3.5" />}
+                                  </button>
+                                  <button onClick={() => togglePosted(cid)}
+                                    className={`p-1.5 rounded-md hover:bg-white/5 transition-colors ${isPosted ? 'text-emerald-400' : 'text-gray-500 hover:text-emerald-400'}`} title={isPosted ? 'Mark unposted' : 'Mark as posted'}>
+                                    {isPosted ? <FiCheckCircle className="w-3.5 h-3.5" /> : <FiCircle className="w-3.5 h-3.5" />}
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="relative mb-2">
+                                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-violet-500 to-pink-500 rounded-full" />
+                                <p className="pl-3.5 text-sm text-gray-200 leading-relaxed">{comment.text}</p>
+                                {copiedId === cid && <span className="absolute -top-1 right-0 text-[10px] text-emerald-400 font-medium">Copied!</span>}
+                              </div>
+                              <div className="flex items-center gap-3 text-[11px] text-gray-500">
+                                <span className="flex items-center gap-1">
+                                  Naturalness: <span className="text-gray-300 font-medium">{comment.naturalness ?? 0}/10</span>
+                                </span>
+                                <span>{comment.estimated_engagement}</span>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {loading && (
+                <div className="space-y-3">{[1,2,3].map(i => (
+                  <div key={i} className="p-4 rounded-xl bg-[#111118] border border-[#1e1e2e] space-y-3">
+                    <Skeleton className="h-5 w-48 bg-[#1e1e2e]" />
+                    <Skeleton className="h-16 w-full bg-[#1e1e2e]" />
+                    <Skeleton className="h-3 w-32 bg-[#1e1e2e]" />
+                  </div>
+                ))}</div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ Tab: Reply Strategies ════════════════════ */}
+          {activeTab === 'replies' && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <HiOutlineReply className="w-5 h-5 text-cyan-400" /> Reply Strategies
+                <Badge className="text-[11px] bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">{replyStrategies.length}</Badge>
+              </h2>
+
+              {!hasData && !loading ? (
+                <div className="p-12 rounded-xl bg-[#111118] border border-[#1e1e2e] text-center">
+                  <HiOutlineReply className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+                  <h3 className="text-base font-medium text-gray-400 mb-2">No Reply Strategies</h3>
+                  <p className="text-sm text-gray-500 mb-4">Run a campaign to generate reply strategies</p>
+                  <Button onClick={() => setActiveTab('setup')} variant="outline" className="border-violet-500/30 text-violet-300 hover:bg-violet-600/10">
+                    Set Up Campaign
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {replyStrategies.map((rs, i) => (
+                    <div key={i} className="p-4 rounded-xl bg-[#111118] border border-[#1e1e2e] hover:border-cyan-500/20 transition-all space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge className={`text-[10px] border ${replyTypeBadge(rs.comment_type)}`}>{rs.comment_type}</Badge>
+                        <Badge className="text-[10px] bg-[#0a0a0f] text-gray-400 border border-[#1e1e2e]">{rs.tone}</Badge>
+                      </div>
+                      {/* Original Comment */}
+                      <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#1e1e2e]">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Original Comment</p>
+                        <p className="text-sm text-gray-400 italic">&ldquo;{rs.example_original_comment}&rdquo;</p>
+                      </div>
+                      <div className="flex items-center justify-center"><FiArrowRight className="w-3 h-3 text-gray-600 rotate-90" /></div>
+                      {/* Suggested Reply */}
+                      <div className="relative p-3 rounded-lg bg-violet-500/5 border border-violet-500/20">
+                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-cyan-500 to-violet-500 rounded-full" />
+                        <div className="pl-2">
+                          <p className="text-[10px] text-cyan-400 uppercase tracking-wider mb-1">Your Reply</p>
+                          <p className="text-sm text-gray-200 leading-relaxed">{rs.suggested_reply}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] text-gray-500"><span className="text-gray-400">Strategy:</span> {rs.brand_integration}</p>
+                        <button onClick={() => handleCopy(rs.suggested_reply ?? '', `reply-${i}`)}
+                          className="p-1.5 rounded-md hover:bg-white/5 text-gray-500 hover:text-white transition-colors">
+                          {copiedId === `reply-${i}` ? <FiCheck className="w-3.5 h-3.5 text-emerald-400" /> : <FiCopy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {loading && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">{[1,2,3,4].map(i => (
+                  <div key={i} className="p-4 rounded-xl bg-[#111118] border border-[#1e1e2e] space-y-3">
+                    <Skeleton className="h-5 w-24 bg-[#1e1e2e]" />
+                    <Skeleton className="h-16 w-full bg-[#1e1e2e]" />
+                    <Skeleton className="h-16 w-full bg-[#1e1e2e]" />
+                  </div>
+                ))}</div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ Tab: Campaign Plan ═══════════════════════ */}
+          {activeTab === 'plan' && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <FiCalendar className="w-5 h-5 text-emerald-400" /> 30-Day Campaign Plan
+              </h2>
+
+              {!hasData && !loading ? (
+                <div className="p-12 rounded-xl bg-[#111118] border border-[#1e1e2e] text-center">
+                  <FiCalendar className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+                  <h3 className="text-base font-medium text-gray-400 mb-2">No Campaign Plan</h3>
+                  <p className="text-sm text-gray-500 mb-4">Launch a campaign to generate your 30-day plan</p>
+                  <Button onClick={() => setActiveTab('setup')} variant="outline" className="border-violet-500/30 text-violet-300 hover:bg-violet-600/10">
+                    Set Up Campaign
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Campaign Header */}
+                  <div className="p-5 rounded-xl bg-gradient-to-br from-[#111118] to-emerald-500/5 border border-emerald-500/20">
+                    <p className="text-sm text-gray-300 mb-3">{campaignPlan?.goal}</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#1e1e2e] text-center">
+                        <p className="text-[10px] text-gray-500 mb-1">Target Reach</p>
+                        <p className="text-xl font-bold text-emerald-400">{campaignPlan?.total_target_reach || '--'}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#1e1e2e] text-center">
+                        <p className="text-[10px] text-gray-500 mb-1">Total Videos</p>
+                        <p className="text-xl font-bold text-violet-400">{campaignPlan?.total_target_videos || '--'}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#1e1e2e] text-center">
+                        <p className="text-[10px] text-gray-500 mb-1">Duration</p>
+                        <p className="text-xl font-bold text-cyan-400">{campaignPlan?.duration || '--'}</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-[#0a0a0f] border border-[#1e1e2e] text-center">
+                        <p className="text-[10px] text-gray-500 mb-1">Comments/Day</p>
+                        <p className="text-xl font-bold text-pink-400">{kpis?.comments_per_day || '--'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPIs */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Comments/Day', val: kpis?.comments_per_day, icon: FiMessageSquare, color: 'text-pink-400' },
+                      { label: 'Target Replies', val: kpis?.target_replies, icon: HiOutlineReply, color: 'text-cyan-400' },
+                      { label: 'Reach Goal', val: kpis?.reach_goal, icon: FiTrendingUp, color: 'text-emerald-400' },
+                      { label: 'Engagement Rate', val: kpis?.engagement_rate_target, icon: FiBarChart2, color: 'text-violet-400' },
+                    ].map((kpi, i) => (
+                      <div key={i} className="p-3 rounded-xl bg-[#111118] border border-[#1e1e2e]">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-gray-500">{kpi.label}</span>
+                          <kpi.icon className={`w-3.5 h-3.5 ${kpi.color}`} />
+                        </div>
+                        <p className={`text-sm font-bold ${kpi.color}`}>{kpi.val ?? '--'}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Weekly Breakdown */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2 px-1">
+                      <FiLayers className="w-4 h-4 text-violet-400" /> Weekly Breakdown
+                    </h3>
+                    {weeklyBreakdown.map((week, i) => (
+                      <div key={i} className="rounded-xl bg-[#111118] border border-[#1e1e2e] overflow-hidden">
+                        <button onClick={() => toggleWeek(week.week ?? i+1)}
+                          className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center text-sm font-bold text-violet-400">
+                              W{week.week}
+                            </div>
+                            <div className="text-left">
+                              <p className="text-sm font-medium text-gray-200">{week.theme}</p>
+                              <p className="text-[11px] text-gray-500">{week.daily_videos} videos/day - {week.platform_focus}</p>
+                            </div>
+                          </div>
+                          {expandedWeeks.has(week.week ?? i+1) ? <FiChevronUp className="w-4 h-4 text-gray-500" /> : <FiChevronDown className="w-4 h-4 text-gray-500" />}
+                        </button>
+                        {expandedWeeks.has(week.week ?? i+1) && (
+                          <div className="px-4 pb-4 pt-0 border-t border-[#1e1e2e]">
+                            <div className="space-y-1.5 mt-3">
+                              {(Array.isArray(week.key_actions) ? week.key_actions : []).map((action, ai) => (
+                                <div key={ai} className="flex items-start gap-2 text-sm text-gray-400">
+                                  <FiArrowRight className="w-3 h-3 text-violet-400 mt-1 shrink-0" />
+                                  <span>{action}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Daily Schedule */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2 px-1">
+                      <FiClock className="w-4 h-4 text-cyan-400" /> Daily Schedule
+                    </h3>
+                    <div className="rounded-xl bg-[#111118] border border-[#1e1e2e] overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-[#1e1e2e]">
+                              <th className="text-left p-3 text-[11px] text-gray-500 uppercase tracking-wider font-medium">Day</th>
+                              <th className="text-left p-3 text-[11px] text-gray-500 uppercase tracking-wider font-medium">Videos</th>
+                              <th className="text-left p-3 text-[11px] text-gray-500 uppercase tracking-wider font-medium">Platform</th>
+                              <th className="text-left p-3 text-[11px] text-gray-500 uppercase tracking-wider font-medium">Time</th>
+                              <th className="text-left p-3 text-[11px] text-gray-500 uppercase tracking-wider font-medium">Focus</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dailySchedule.map((day, i) => (
+                              <tr key={i} className="border-b border-[#1e1e2e]/50 hover:bg-white/[0.02] transition-colors">
+                                <td className="p-3 text-gray-300 font-medium">{day.day}</td>
+                                <td className="p-3 text-gray-400">{day.videos_to_target}</td>
+                                <td className="p-3">
+                                  <Badge className={`text-[10px] border ${platformBg(day.platform)}`}>{day.platform}</Badge>
+                                </td>
+                                <td className="p-3 text-gray-400 flex items-center gap-1"><FiClock className="w-3 h-3 text-gray-600" /> {day.optimal_time}</td>
+                                <td className="p-3 text-gray-400">{day.focus_area}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {loading && (
+                <div className="space-y-3">{[1,2,3].map(i => (
+                  <div key={i} className="p-4 rounded-xl bg-[#111118] border border-[#1e1e2e] space-y-3">
+                    <Skeleton className="h-6 w-32 bg-[#1e1e2e]" />
+                    <Skeleton className="h-4 w-full bg-[#1e1e2e]" />
+                    <Skeleton className="h-4 w-3/4 bg-[#1e1e2e]" />
+                  </div>
+                ))}</div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ Tab: Execution Queue ═════════════════════ */}
+          {activeTab === 'queue' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <FiSend className="w-5 h-5 text-emerald-400" /> Today&apos;s Execution Queue
+                </h2>
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <FiCheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  {completedTasks.size} of {executionQueue.length} completed
+                </div>
+              </div>
+
+              {/* Progress */}
+              {hasData && executionQueue.length > 0 && (
+                <div className="p-4 rounded-xl bg-[#111118] border border-[#1e1e2e]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-500">Today&apos;s Progress</span>
+                    <span className="text-xs font-medium text-emerald-400">{Math.round((completedTasks.size / executionQueue.length) * 100)}%</span>
+                  </div>
+                  <Progress value={(completedTasks.size / executionQueue.length) * 100} className="h-2 bg-[#1e1e2e]" />
+                </div>
+              )}
+
+              {!hasData && !loading ? (
+                <div className="p-12 rounded-xl bg-[#111118] border border-[#1e1e2e] text-center">
+                  <FiSend className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+                  <h3 className="text-base font-medium text-gray-400 mb-2">No Tasks in Queue</h3>
+                  <p className="text-sm text-gray-500 mb-4">Launch a campaign to populate your execution queue</p>
+                  <Button onClick={() => setActiveTab('setup')} variant="outline" className="border-violet-500/30 text-violet-300 hover:bg-violet-600/10">
+                    Set Up Campaign
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {executionQueue.map((task, i) => {
+                    const isDone = completedTasks.has(task.priority ?? i)
+                    return (
+                      <div key={i} className={`p-4 rounded-xl border transition-all ${isDone ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-[#111118] border-[#1e1e2e] hover:border-violet-500/20'}`}>
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${isDone ? 'bg-emerald-500/20 text-emerald-400' : 'bg-violet-500/20 text-violet-400'}`}>
+                              {isDone ? <FiCheck className="w-3.5 h-3.5" /> : `#${task.priority}`}
+                            </div>
+                            <Badge className={`text-[10px] border ${platformBg(task.platform)}`}>
+                              {platformIcon(task.platform)}
+                              <span className="ml-1">{task.platform}</span>
+                            </Badge>
+                            <Badge className={`text-[10px] border ${task.action === 'reply' ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30' : 'bg-violet-500/15 text-violet-400 border-violet-500/30'}`}>
+                              {task.action}
+                            </Badge>
+                            {isDone && <Badge className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Done</Badge>}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button onClick={() => handleCopy(task.pre_written_comment ?? '', `task-${i}`)}
+                              className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors flex items-center gap-1">
+                              {copiedId === `task-${i}` ? <><FiCheck className="w-3 h-3 text-emerald-400" /> Copied</> : <><FiCopy className="w-3 h-3" /> Copy</>}
+                            </button>
+                            <button onClick={() => toggleTask(task.priority ?? i)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors flex items-center gap-1 ${isDone ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25' : 'bg-[#0a0a0f] text-gray-400 hover:bg-white/5 border border-[#1e1e2e]'}`}>
+                              {isDone ? <><FiCheckCircle className="w-3 h-3" /> Done</> : <><FiCircle className="w-3 h-3" /> Mark Done</>}
+                            </button>
+                          </div>
+                        </div>
+
+                        <h4 className="text-sm font-medium text-gray-200 mb-2">{task.video_title}</h4>
+
+                        <div className="relative mb-3">
+                          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-violet-500 to-pink-500 rounded-full" />
+                          <p className="pl-3.5 text-sm text-gray-300 leading-relaxed">{task.pre_written_comment}</p>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-[11px] text-gray-500">
+                          <span className="flex items-center gap-1"><FiClock className="w-3 h-3" /> {task.optimal_post_time}</span>
+                          <span className="flex items-center gap-1"><FiEye className="w-3 h-3" /> Reach: {task.expected_reach}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {loading && (
+                <div className="space-y-3">{[1,2,3].map(i => (
+                  <div key={i} className="p-4 rounded-xl bg-[#111118] border border-[#1e1e2e] space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-7 w-7 rounded-lg bg-[#1e1e2e]" />
+                      <Skeleton className="h-5 w-20 bg-[#1e1e2e]" />
+                      <Skeleton className="h-5 w-16 bg-[#1e1e2e]" />
+                    </div>
+                    <Skeleton className="h-4 w-3/4 bg-[#1e1e2e]" />
+                    <Skeleton className="h-12 w-full bg-[#1e1e2e]" />
+                  </div>
+                ))}</div>
+              )}
+            </div>
+          )}
+        </main>
       </div>
-    </ErrorBoundary>
+
+      {/* ── Footer ──────────────────────────────────────────── */}
+      <footer className="border-t border-[#1e1e2e] bg-[#0a0a0f]">
+        <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center">
+              <FiZap className="w-2.5 h-2.5 text-white" />
+            </div>
+            <span className="text-[11px] text-gray-600">RUMORA - Viral Video Comment Automation</span>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-gray-600">
+            <span>100K+ reach</span>
+            <span className="text-gray-700">|</span>
+            <span>100 videos</span>
+            <span className="text-gray-700">|</span>
+            <span>30 days</span>
+          </div>
+        </div>
+      </footer>
+    </div>
   )
 }

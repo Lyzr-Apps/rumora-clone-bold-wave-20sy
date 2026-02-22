@@ -1,0 +1,172 @@
+{
+  "agent_name": "Rumora Viral Marketing Automation Agent",
+  "agent_id": "699a267d4274f089c16d4440",
+  "description": "AI agent that automates viral video comment marketing. It discovers trending videos relevant to a brand's niche on YouTube and TikTok, generates authentic marketing comments that subtly promote a brand, creates reply strategies for existing video comments, plans 30-day campaigns targeting 100K+ reach, and provides detailed execution plans for comment automation.",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "discovered_videos": [
+      {
+        "title": "string",
+        "platform": "string",
+        "url_suggestion": "string",
+        "estimated_views": "string",
+        "engagement_level": "string",
+        "relevance_score": "number",
+        "why_target": "string",
+        "niche_match": "string"
+      }
+    ],
+    "generated_comments": [
+      {
+        "target_video": "string",
+        "platform": "string",
+        "comments": [
+          {
+            "text": "string",
+            "style": "string",
+            "naturalness": "number",
+            "brand_mention_type": "string",
+            "estimated_engagement": "string"
+          }
+        ]
+      }
+    ],
+    "reply_strategies": [
+      {
+        "comment_type": "string",
+        "example_original_comment": "string",
+        "suggested_reply": "string",
+        "brand_integration": "string",
+        "tone": "string"
+      }
+    ],
+    "campaign_plan": {
+      "goal": "string",
+      "duration": "string",
+      "total_target_videos": "number",
+      "total_target_reach": "string",
+      "weekly_breakdown": [
+        {
+          "week": "number",
+          "theme": "string",
+          "daily_videos": "number",
+          "platform_focus": "string",
+          "key_actions": [
+            "string"
+          ]
+        }
+      ],
+      "daily_schedule": [
+        {
+          "day": "string",
+          "videos_to_target": "number",
+          "platform": "string",
+          "optimal_time": "string",
+          "focus_area": "string"
+        }
+      ],
+      "kpis": {
+        "comments_per_day": "number",
+        "target_replies": "number",
+        "reach_goal": "string",
+        "engagement_rate_target": "string"
+      }
+    },
+    "execution_queue": [
+      {
+        "priority": "number",
+        "video_title": "string",
+        "platform": "string",
+        "action": "string",
+        "pre_written_comment": "string",
+        "optimal_post_time": "string",
+        "expected_reach": "string",
+        "status": "string"
+      }
+    ]
+  },
+  "example_response": {
+    "discovered_videos": [
+      {
+        "title": "sample string",
+        "platform": "sample string",
+        "url_suggestion": "sample string",
+        "estimated_views": "sample string",
+        "engagement_level": "sample string",
+        "relevance_score": 0,
+        "why_target": "sample string",
+        "niche_match": "sample string"
+      }
+    ],
+    "generated_comments": [
+      {
+        "target_video": "sample string",
+        "platform": "sample string",
+        "comments": [
+          {
+            "text": "sample string",
+            "style": "sample string",
+            "naturalness": 0,
+            "brand_mention_type": "sample string",
+            "estimated_engagement": "sample string"
+          }
+        ]
+      }
+    ],
+    "reply_strategies": [
+      {
+        "comment_type": "sample string",
+        "example_original_comment": "sample string",
+        "suggested_reply": "sample string",
+        "brand_integration": "sample string",
+        "tone": "sample string"
+      }
+    ],
+    "campaign_plan": {
+      "goal": "sample string",
+      "duration": "sample string",
+      "total_target_videos": 0,
+      "total_target_reach": "sample string",
+      "weekly_breakdown": [
+        {
+          "week": 0,
+          "theme": "sample string",
+          "daily_videos": 0,
+          "platform_focus": "sample string",
+          "key_actions": [
+            "sample string"
+          ]
+        }
+      ],
+      "daily_schedule": [
+        {
+          "day": "sample string",
+          "videos_to_target": 0,
+          "platform": "sample string",
+          "optimal_time": "sample string",
+          "focus_area": "sample string"
+        }
+      ],
+      "kpis": {
+        "comments_per_day": 0,
+        "target_replies": 0,
+        "reach_goal": "sample string",
+        "engagement_rate_target": "sample string"
+      }
+    },
+    "execution_queue": [
+      {
+        "priority": 0,
+        "video_title": "sample string",
+        "platform": "sample string",
+        "action": "sample string",
+        "pre_written_comment": "sample string",
+        "optimal_post_time": "sample string",
+        "expected_reach": "sample string",
+        "status": "sample string"
+      }
+    ]
+  }
+}
